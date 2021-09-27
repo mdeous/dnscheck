@@ -117,14 +117,14 @@ func (d *DomainChecker) CheckCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				// check if domain resolves
-				resolves, err := dns.DomainResolves(rootDomain, d.cfg.Resolver)
+				resolves, err = dns.DomainResolves(rootDomain, d.cfg.Resolver)
 				if err != nil {
 					log.Warn("Error while resolving %s: %v", rootDomain, err)
 					continue
 				}
 				if !resolves {
 					// CNAME target root domain has no SOA, might be available to register
-					finding := &Finding{
+					finding = &Finding{
 						Domain:  domain,
 						Target:  cname,
 						Service: NoService,
@@ -169,4 +169,3 @@ func NewDomainChecker(config *DomainCheckerConfig) *DomainChecker {
 		services: LoadServices(),
 	}
 }
-
