@@ -221,3 +221,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+### Project Ignored Files
+dnscheck
+domains.txt
