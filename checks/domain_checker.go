@@ -67,7 +67,7 @@ func (d *DomainChecker) CheckCNAME(domain string) (*Finding, error) {
 
 	resolves, err := dns.DomainResolves(domain, d.cfg.Resolver)
 	if err != nil {
-		return nil, err
+		log.Warn(err.Error())
 	}
 
 	var matchedServiceWithPatterns bool
