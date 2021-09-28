@@ -71,10 +71,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 		return nil, err
 	}
 
-	resolves, err := dns.DomainResolves(domain, d.cfg.Nameserver)
-	if err != nil {
-		log.Warn(err.Error())
-	}
+	resolves := dns.DomainResolves(domain, d.cfg.Nameserver)
 
 	var matchedServiceWithPatterns bool
 
@@ -123,7 +120,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				// check if domain resolves
-				resolves, err = dns.DomainResolves(rootDomain, d.cfg.Nameserver)
+				resolves = dns.DomainResolves(rootDomain, d.cfg.Nameserver)
 				if err != nil {
 					log.Warn("Error while resolving %s: %v", rootDomain, err)
 					continue

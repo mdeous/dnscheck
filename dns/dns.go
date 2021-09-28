@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-var lookupErrors = []string{
-	"no such host",
-	"server misbehaving",
-}
-
 func GetCNAME(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(domain+".", dns.TypeCNAME)
@@ -31,7 +26,7 @@ func GetCNAME(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
-func DomainResolves(domain string, nameserver string) (bool, error) {
+func DomainResolves(domain string, nameserver string) bool {
 	resolver := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -43,12 +38,7 @@ func DomainResolves(domain string, nameserver string) (bool, error) {
 	}
 	ips, err := resolver.LookupHost(context.Background(), domain)
 	if err != nil {
-		for _, lookupErr := range lookupErrors {
-			if strings.Contains(err.Error(), lookupErr) {
-				return false, nil
-			}
-		}
-		return false, fmt.Errorf("unexpected error while resolving %s: %v", domain, err)
+		return false
 	}
-	return len(ips) > 0, nil
+	return len(ips) > 0
 }
