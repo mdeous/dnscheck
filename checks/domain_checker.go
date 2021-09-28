@@ -42,7 +42,7 @@ func (d *DomainChecker) checkPatterns(domain string, httpBody string, patterns [
 	for _, pattern := range patterns {
 		if httpBody == "" {
 			url := protocol + "://" + domain
-			d.verbose("Fetching content of %s", url)
+			d.verbose("%s: Fetching content of %s", domain, url)
 			httpBody, err = utils.HttpGet(url)
 			if err != nil {
 				d.verbose(err.Error())
@@ -80,14 +80,14 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 
 	if len(cnames) > 0 {
 		// target has CNAME records
-		d.verbose("Found CNAME record for %s: %s", domain, strings.Join(cnames, ", "))
+		d.verbose("%s: Found CNAME record: %s", domain, strings.Join(cnames, ", "))
 		for _, cname := range cnames {
 			matchedServiceWithPatterns = false
 			for _, service := range d.services {
 				if len(service.CNames) > 0 {
 					for _, serviceCname := range service.CNames {
 						if strings.HasSuffix(cname, serviceCname) {
-							d.verbose("CNAME %s matches known service: %s", cname, service.Name)
+							d.verbose("%s: CNAME %s matches known service: %s", domain, cname, service.Name)
 							if resolves && len(service.Patterns) > 0 {
 								// CNAME record matches a known service for which we have signatures
 								finding, httpBody = d.checkPatterns(domain, httpBody, service.Patterns)
@@ -115,7 +115,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 			}
 
 			if !matchedServiceWithPatterns {
-				d.verbose("Checking CNAME target domain")
+				d.verbose("%s: Checking CNAME target availability: %s", domain, cname)
 				// extract root domain from CNAME target
 				rootDomain, err := publicsuffix.EffectiveTLDPlusOne(cname)
 				if err != nil {
@@ -144,7 +144,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 	} else {
 		// target has no CNAME records, check patterns for services that don't need one
 		if resolves {
-			d.verbose("Target has no CNAMEs but resolves, checking against known patterns")
+			d.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
 			for _, service := range d.services {
 				if len(service.CNames) == 0 {
 					finding, httpBody = d.checkPatterns(domain, httpBody, service.Patterns)
@@ -160,7 +160,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 	}
 
 	// no issue found
-	d.verbose("No possible takeover found on %s", domain)
+	d.verbose("%s: No possible takeover found", domain)
 	return nil, nil
 }
 
