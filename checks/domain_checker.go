@@ -6,6 +6,7 @@ import (
 	"github.com/mdeous/dnscheck/utils"
 	"golang.org/x/net/publicsuffix"
 	"strings"
+	"sync"
 )
 
 const NoService = "n/a"
@@ -14,11 +15,16 @@ type DomainCheckerConfig struct {
 	Resolver string
 	Verbose  bool
 	UseSSL   bool
+	Workers  int
 }
 
 type DomainChecker struct {
-	cfg      *DomainCheckerConfig
-	services []Service
+	cfg        *DomainCheckerConfig
+	services   []Service
+	wg         sync.WaitGroup
+	checkFuncs []func(string) (*Finding, error)
+	results    chan *Finding
+	Domains    chan string
 }
 
 func (d *DomainChecker) verbose(format string, values ...interface{}) {
@@ -53,7 +59,7 @@ func (d *DomainChecker) checkPatterns(domain string, httpBody string, patterns [
 	return nil, httpBody
 }
 
-func (d *DomainChecker) CheckCNAME(domain string) (*Finding, error) {
+func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 	var (
 		err      error
 		httpBody string
@@ -158,14 +164,59 @@ func (d *DomainChecker) CheckCNAME(domain string) (*Finding, error) {
 	return nil, nil
 }
 
-func (d *DomainChecker) CheckNS(_ string) (*Finding, error) {
+func (d *DomainChecker) checkNS(_ string) (*Finding, error) {
 	// TODO: implement dangling NS detection
 	return nil, nil
 }
 
+func (d *DomainChecker) scanWorker() {
+	defer d.wg.Done()
+	var (
+		finding *Finding
+		err     error
+	)
+	for domain := range d.Domains {
+		log.Info("Checking %s", domain)
+		for _, checkFunc := range d.checkFuncs {
+			if finding, err = checkFunc(domain); err != nil {
+				log.Warn(err.Error())
+			} else {
+				if finding != nil {
+					d.results <- finding
+					break
+				}
+			}
+		}
+	}
+}
+
+func (d *DomainChecker) Scan() {
+	// start workers
+	for i := 1; i <= d.cfg.Workers; i++ {
+		d.wg.Add(1)
+		go d.scanWorker()
+	}
+	// wait for workers to finish and close results channel
+	go func() {
+		d.wg.Wait()
+		close(d.results)
+	}()
+}
+
+func (d *DomainChecker) Results() <-chan *Finding {
+	return d.results
+}
+
 func NewDomainChecker(config *DomainCheckerConfig) *DomainChecker {
-	return &DomainChecker{
+	d := &DomainChecker{
 		cfg:      config,
 		services: LoadServices(),
+		Domains:  make(chan string),
+		results:  make(chan *Finding),
 	}
+	d.checkFuncs = []func(string) (*Finding, error){
+		d.checkCNAME,
+		d.checkNS,
+	}
+	return d
 }

@@ -29,39 +29,26 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		workers, err := cmd.Flags().GetInt("workers")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// instanciate domain checker
 		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
 			Resolver: resolver,
 			Verbose:  verbose,
 			UseSSL:   useSSL,
+			Workers:  workers,
 		})
 
 		// load target domains
-		domains := make(chan string)
-		go utils.ReadLines(domainFile, domains)
+		go utils.ReadLines(domainFile, checker.Domains)
 
-		// check domains
-		for domain := range domains {
-			log.Info("Checking %s", domain)
-
-			resultCNAME, err := checker.CheckCNAME(domain)
-			if err != nil {
-				log.Warn("Failed to check CNAME records for %s: %v", domain, err)
-			} else {
-				if resultCNAME != nil {
-					log.Finding("[service: %s] %s %s: %s (method: %s)", resultCNAME.Service, resultCNAME.Domain, resultCNAME.Type, resultCNAME.Target, resultCNAME.Method)
-				}
-			}
-
-			resultNS, err := checker.CheckNS(domain)
-			if err != nil {
-				log.Warn("Failed to check NS records for %s: %v", domain, err)
-			} else {
-				if resultNS != nil {
-					log.Finding("[service: %s] %s %s: %s (method: %s)", resultNS.Service, resultNS.Domain, resultNS.Type, resultNS.Target, resultNS.Method)
-				}
-			}
+		// scan domains and read results
+		checker.Scan()
+		for f := range checker.Results() {
+			log.Finding("[service: %s] %s %s: %s (method: %s)", f.Service, f.Domain, f.Type, f.Target, f.Method)
 		}
 	},
 }
@@ -75,4 +62,5 @@ func init() {
 	}
 	checkCmd.Flags().StringP("resolver", "r", "8.8.8.8:53", "server and port to use for name resolution")
 	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
+	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 }
