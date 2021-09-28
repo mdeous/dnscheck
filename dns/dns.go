@@ -14,10 +14,10 @@ var lookupErrors = []string{
 	"server misbehaving",
 }
 
-func GetCNAME(domain string, resolver string) ([]string, error) {
+func GetCNAME(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(domain+".", dns.TypeCNAME)
-	ret, err := dns.Exchange(msg, resolver)
+	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}

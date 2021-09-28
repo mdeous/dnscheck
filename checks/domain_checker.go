@@ -12,10 +12,10 @@ import (
 const NoService = "n/a"
 
 type DomainCheckerConfig struct {
-	Resolver string
-	Verbose  bool
-	UseSSL   bool
-	Workers  int
+	Nameserver string
+	Verbose    bool
+	UseSSL     bool
+	Workers    int
 }
 
 type DomainChecker struct {
@@ -66,12 +66,12 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 		finding  *Finding
 	)
 
-	cnames, err := dns.GetCNAME(domain, d.cfg.Resolver)
+	cnames, err := dns.GetCNAME(domain, d.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
 
-	resolves, err := dns.DomainResolves(domain, d.cfg.Resolver)
+	resolves, err := dns.DomainResolves(domain, d.cfg.Nameserver)
 	if err != nil {
 		log.Warn(err.Error())
 	}
@@ -123,7 +123,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				// check if domain resolves
-				resolves, err = dns.DomainResolves(rootDomain, d.cfg.Resolver)
+				resolves, err = dns.DomainResolves(rootDomain, d.cfg.Nameserver)
 				if err != nil {
 					log.Warn("Error while resolving %s: %v", rootDomain, err)
 					continue

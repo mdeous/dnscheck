@@ -17,7 +17,7 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		resolver, err := cmd.Flags().GetString("resolver")
+		nameserver, err := cmd.Flags().GetString("nameserver")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -36,10 +36,10 @@ var checkCmd = &cobra.Command{
 
 		// instanciate domain checker
 		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
-			Resolver: resolver,
-			Verbose:  verbose,
-			UseSSL:   useSSL,
-			Workers:  workers,
+			Nameserver: nameserver,
+			Verbose:    verbose,
+			UseSSL:     useSSL,
+			Workers:    workers,
 		})
 
 		// load target domains
@@ -60,7 +60,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	checkCmd.Flags().StringP("resolver", "r", "8.8.8.8:53", "server and port to use for name resolution")
+	checkCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
 	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 }
