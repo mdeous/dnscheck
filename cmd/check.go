@@ -13,15 +13,19 @@ var checkCmd = &cobra.Command{
 	Short: "Check for vulnerable domains",
 	Run: func(cmd *cobra.Command, args []string) {
 		// get command-line arguments
+		verbose, err := cmd.Flags().GetBool("verbose")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		fpFile, err := cmd.Flags().GetString("fingerprints")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 		domainFile, err := cmd.Flags().GetString("domains")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 		nameserver, err := cmd.Flags().GetString("nameserver")
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -40,10 +44,11 @@ var checkCmd = &cobra.Command{
 
 		// instanciate domain checker
 		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
-			Nameserver: nameserver,
-			Verbose:    verbose,
-			UseSSL:     useSSL,
-			Workers:    workers,
+			Nameserver:   nameserver,
+			Verbose:      verbose,
+			UseSSL:       useSSL,
+			Workers:      workers,
+			CustomFpFile: fpFile,
 		})
 
 		// load target domains

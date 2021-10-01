@@ -16,10 +16,11 @@ const (
 )
 
 type DomainCheckerConfig struct {
-	Nameserver string
-	Verbose    bool
-	UseSSL     bool
-	Workers    int
+	Nameserver   string
+	Verbose      bool
+	UseSSL       bool
+	Workers      int
+	CustomFpFile string
 }
 
 type DomainChecker struct {
@@ -228,7 +229,7 @@ func (d *DomainChecker) Results() <-chan *Finding {
 func NewDomainChecker(config *DomainCheckerConfig) *DomainChecker {
 	d := &DomainChecker{
 		cfg:      config,
-		services: LoadServices(),
+		services: LoadServices(config.CustomFpFile),
 		Domains:  make(chan string),
 		results:  make(chan *Finding),
 	}
