@@ -126,15 +126,23 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				if !rootResolves {
-					// CNAME target root domain does not resolve, might be available to registration7
-					finding = &Finding{
-						Domain:  domain,
-						Target:  rootDomain,
-						Service: NoService,
-						Type:    IssueTargetNoResolve,
-						Method:  MethodCnameLookup,
+					// domain does not resolve, does it have an SOA record?
+					soaRecords, err := dns.GetSOA(rootDomain, d.cfg.Nameserver)
+					if err != nil {
+						log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
+						continue
 					}
-					return finding, nil
+					if len(soaRecords) == 0 {
+						// CNAME target root domain has no SOA and does not resolve, might be available to registration
+						finding = &Finding{
+							Domain:  domain,
+							Target:  rootDomain,
+							Service: NoService,
+							Type:    IssueTargetNoResolve,
+							Method:  MethodCnameLookup,
+						}
+						return finding, nil
+					}
 				}
 			}
 		}
