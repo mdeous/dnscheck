@@ -43,15 +43,15 @@ func GetCNAME(domain string, nameserver string) ([]string, error) {
 
 func GetSOA(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
-	msg.SetQuestion(domain+".", dns.TypeNS)
+	msg.SetQuestion(domain+".", dns.TypeSOA)
 	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
 	var records []string
 	for _, answer := range ret.Answer {
-		record, isNS := answer.(*dns.NS)
-		if isNS {
+		record, isSOA := answer.(*dns.SOA)
+		if isSOA {
 			records = append(records, strings.TrimRight(record.Ns, "."))
 		}
 	}

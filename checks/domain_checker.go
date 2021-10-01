@@ -9,7 +9,10 @@ import (
 	"sync"
 )
 
-const NoService = "n/a"
+const (
+	NoService    = "n/a"
+	NoNameserver = "no nameserver"
+)
 
 type DomainCheckerConfig struct {
 	Nameserver string
@@ -173,7 +176,7 @@ func (d *DomainChecker) checkNS(domain string) (*Finding, error) {
 	if dns.DomainIsSERVFAIL(domain, d.cfg.Nameserver) {
 		finding := &Finding{
 			Domain:  domain,
-			Target:  domain,
+			Target:  NoNameserver,
 			Service: NoService,
 			Type:    IssueNsTakeover,
 			Method:  MethodServfail,
