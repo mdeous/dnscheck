@@ -7,11 +7,10 @@ import (
 )
 
 var (
-	redColor = color.New(color.FgRed)
-	Red      = redColor.SprintfFunc()
-	RedBold  = redColor.Add(color.Bold).SprintfFunc()
-	Green    = color.New(color.FgGreen).SprintfFunc()
-	Blue     = color.New(color.FgBlue).SprintfFunc()
+	Red     = color.New(color.FgRed).SprintfFunc()
+	RedBold = color.New(color.FgRed).Add(color.Bold).SprintfFunc()
+	Green   = color.New(color.FgGreen).SprintfFunc()
+	Blue    = color.New(color.FgBlue).SprintfFunc()
 )
 
 func Debug(format string, values ...interface{}) {
