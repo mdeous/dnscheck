@@ -33,6 +33,10 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		output, err := cmd.Flags().GetString("output")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// instanciate domain checker
 		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
@@ -46,9 +50,22 @@ var checkCmd = &cobra.Command{
 		go utils.ReadLines(domainFile, checker.Domains)
 
 		// scan domains and read results
+		var findings []*checks.Finding
 		checker.Scan()
 		for f := range checker.Results() {
 			log.Finding("[service: %s] %s %s: %s (method: %s)", f.Service, f.Domain, f.Type, f.Target, f.Method)
+			if output != "" {
+				findings = append(findings, f)
+			}
+		}
+
+		// write results to file
+		if output != "" {
+			data := &checks.Findings{Data: findings}
+			err := data.Write(output)
+			if err != nil {
+				log.Fatal("Unable to write results: %v", err)
+			}
 		}
 	},
 }
@@ -63,4 +80,5 @@ func init() {
 	checkCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
 	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
+	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
 }
