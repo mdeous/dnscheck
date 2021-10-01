@@ -3,9 +3,9 @@ package checks
 type IssueType string
 
 const (
-	IssueTargetNoResolve IssueType = "target might be unregistered"
+	IssueTargetNoResolve IssueType = "target might be unclaimed"
 	IssueCnameTakeover             = "points to unclaimed resource"
-	//IssueNsTakeover                = "unclaimed zone delegation"
+	IssueNsTakeover                = "unclaimed zone delegation"
 )
 
 type DetectionMethod string
@@ -15,6 +15,7 @@ const (
 	MethodPatternOnly                  = "response body only"
 	MethodCnamePattern                 = "CNAME + response body"
 	MethodCnameLookup                  = "CNAME target lookup"
+	MethodServfail                     = "SERVFAIL check"
 )
 
 type Finding struct {

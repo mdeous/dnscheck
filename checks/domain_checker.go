@@ -120,16 +120,16 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				// check if domain resolves
-				resolves = dns.DomainResolves(rootDomain, d.cfg.Nameserver)
+				rootResolves := dns.DomainResolves(rootDomain, d.cfg.Nameserver)
 				if err != nil {
 					log.Warn("Error while resolving %s: %v", rootDomain, err)
 					continue
 				}
-				if !resolves {
-					// CNAME target root domain has no SOA, might be available to register
+				if !rootResolves {
+					// CNAME target root domain does not resolve, might be available to registration7
 					finding = &Finding{
 						Domain:  domain,
-						Target:  cname,
+						Target:  rootDomain,
 						Service: NoService,
 						Type:    IssueTargetNoResolve,
 						Method:  MethodCnameLookup,
@@ -161,8 +161,17 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 	return nil, nil
 }
 
-func (d *DomainChecker) checkNS(_ string) (*Finding, error) {
-	// TODO: implement dangling NS detection
+func (d *DomainChecker) checkNS(domain string) (*Finding, error) {
+	if dns.DomainIsSERVFAIL(domain, d.cfg.Nameserver) {
+		finding := &Finding{
+			Domain:  domain,
+			Target:  domain,
+			Service: NoService,
+			Type:    IssueNsTakeover,
+			Method:  MethodServfail,
+		}
+		return finding, nil
+	}
 	return nil, nil
 }
 
