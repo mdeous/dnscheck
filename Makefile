@@ -6,7 +6,7 @@ DATE := $(shell git log -1 --format=%cd --date=format:"%Y%m%d%H%M")
 ifeq ($(VERSION),)
     VERSION := $(DATE)
 endif
-LDFLAGS := "-X main.version=$(VERSION)"
+LDFLAGS := "-X github.com/mdeous/dnscheck/cmd.version=$(VERSION)"
 GO_FLAGS := -ldflags $(LDFLAGS)
 
 .PHONY: all clean rebuild deps update-deps help
