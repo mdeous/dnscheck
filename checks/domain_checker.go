@@ -11,6 +11,7 @@ import (
 
 const (
 	NoService    = "n/a"
+	NoTarget     = "no domain"
 	NoNameserver = "no nameserver"
 )
 
@@ -157,7 +158,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 				if len(service.CNames) == 0 {
 					finding, httpBody = d.checkPatterns(domain, httpBody, service.Patterns)
 					if finding != nil {
-						finding.Target = domain
+						finding.Target = NoTarget
 						finding.Service = service.Name
 						finding.Method = MethodPatternOnly
 						return finding, nil
