@@ -17,6 +17,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("fingerprints", "f", "", "custom fingerprints file")
+	rootCmd.PersistentFlags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "increase application verbosity")
 }
