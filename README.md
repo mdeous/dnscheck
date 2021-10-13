@@ -7,11 +7,17 @@
 - CNAMEs pointing to an unregistered domain
 - Zone delegations poiting to an unclaimed zone
 
+Detection of CNAMEs pointing to unclaimed resourrces is based on the information available 
+in [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz).
+
 ## Yet another DNS takeover tool?
 Yes! Because:
 1. I wanted to understand these vulnerabilities better, and what's better for that than writing a tool to detect them?
 2. I couldn't find a tool that I liked enough and that would check both dangling CNAMEs and zone takeovers.
 (which doesn't mean such a tool doesn't exist!)
+
+If you like this tool, use it  (I'll be happy if you do), if you want to improve it, please open
+an issue, or even better, submit a PR, and if you don't like it, a list of alternatives is provided below.
 
 ## Usage
 ### Installation
@@ -67,8 +73,15 @@ Global Flags:
   -v, --verbose               increase application verbosity
 ```
 
+TODO: add an example of output
+
 ### Monitoring domains
 TODO  (not implemented yet)
+
+### Using custom service fingerprints
+A custom fingerprints file can be passed to `dnscheck` by using the `-f` option.
+
+TODO: document fingerprints format, for now, just refer to the current file in `checks/services.json`.
 
 ## Alternatives
 - [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz)
