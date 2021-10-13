@@ -129,8 +129,7 @@
     {
       "name": "uptimerobot",
       "cnames": ["stats.uptimerobot.com"],
-      "patterns": ["page not found"],
-      "regex_patterns": false
+      "patterns": ["page not found"]
     },
     {
       "name": "uservoice",
