@@ -7,7 +7,7 @@
 - CNAMEs pointing to an unregistered domain
 - Zone delegations poiting to an unclaimed zone
 
-Detection of CNAMEs pointing to unclaimed resourrces is based on the information available 
+Detection of CNAMEs pointing to unclaimed resources is based on the information available 
 in [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz).
 
 ## Yet another DNS takeover tool?
