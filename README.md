@@ -17,7 +17,7 @@ Yes! Because:
 (which doesn't mean such a tool doesn't exist!)
 
 If you like this tool, use it  (I'll be happy if you do), if you want to improve it, please open
-an issue, or even better, submit a PR, and if you don't like it, a list of alternatives is provided below.
+an issue, or even better, submit a PR, and if you don't like it, a list of [alternatives](#alternatives) is provided below.
 
 ## Usage
 ### Installation
