@@ -9,7 +9,7 @@ endif
 LDFLAGS := "-X github.com/mdeous/dnscheck/cmd.version=$(VERSION)"
 GO_FLAGS := -ldflags $(LDFLAGS)
 
-.PHONY: all clean rebuild deps update-deps help
+.PHONY: all clean rebuild deps update-deps cross-compile help
 
 $(BINARY_NAME):
 	$(GO_BINARY) build $(GO_FLAGS) -o $(BINARY_NAME) .
