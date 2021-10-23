@@ -39,7 +39,9 @@ go install https://github.com/mdeous/dnscheck
 You should then have `dnscheck` available in your `PATH` (assuming you have a properly configured Go environment).
 
 #### Pre-built binaries
-TODO
+Pre-built binaries for the most common architectures can be downloaded from the 
+project's [latest release page](https://github.com/mdeous/dnscheck/releases/latest).
+After downloading it, simply make the file executable and run it as described below.
 
 ### Checking domains for vulnerabilities
 The only mandatory argument is the `-d`/`-domains` one, which should be the path to a file
@@ -89,7 +91,7 @@ TODO: document fingerprints format, for now, just refer to the current file in `
 - [tko-sub](https://github.com/anshumanbh/tko-subs)
 - [domain-protect](https://github.com/ovotech/domain-protect)
 - [takeover](https://github.com/m4ll0k/takeover)
-- and many more...
+- and [many more](https://www.google.com/search?q=%28dns+OR+domain%29+takeover+site%3Agithub.com)...
 
 ## License
 This project is licensed under the terms of the MIT License.
