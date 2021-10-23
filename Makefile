@@ -11,13 +11,13 @@ GO_FLAGS := -ldflags $(LDFLAGS)
 
 .PHONY: all clean rebuild deps update-deps cross-compile help
 
-$(BINARY_NAME)-$(VERSION):
-	$(GO_BINARY) build $(GO_FLAGS) -o $(BINARY_NAME)-$(VERSION) .
+$(BINARY_NAME):
+	$(GO_BINARY) build $(GO_FLAGS) -o $(BINARY_NAME) .
 
-all: $(BINARY_NAME)-$(VERSION) ## Default build action
+all: $(BINARY_NAME) ## Default build action
 
 clean: ## Clean artifacts from previous build
-	@rm -f $(BINARY_NAME)-$(VERSION)
+	@rm -f $(BINARY_NAME)
 	@rm -rf ./build
 
 rebuild: clean all ## Delete existing artifacts and rebuild
