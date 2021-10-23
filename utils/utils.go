@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func ReadLines(file string, output chan<- string) {
@@ -36,11 +37,14 @@ func ReadLines(file string, output chan<- string) {
 	}
 }
 
-func HttpGet(url string) (string, error) {
+func HttpGet(url string, timeout uint) (string, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	client := &http.Client{Transport: transport}
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(timeout) * time.Second,
+	}
 	resp, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("unable to query %s: %v", url, err)

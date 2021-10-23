@@ -41,6 +41,10 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		timeout, err := cmd.Flags().GetUint("timeout")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// instanciate domain checker
 		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
@@ -49,6 +53,7 @@ var checkCmd = &cobra.Command{
 			UseSSL:       useSSL,
 			Workers:      workers,
 			CustomFpFile: fpFile,
+			HttpTimeout:  timeout,
 		})
 
 		// load target domains
@@ -86,4 +91,5 @@ func init() {
 	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
+	checkCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")
 }
