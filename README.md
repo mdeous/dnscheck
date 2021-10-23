@@ -81,9 +81,37 @@ TODO: add an example of output
 TODO  (not implemented yet)
 
 ### Using custom service fingerprints
-A custom fingerprints file can be passed to `dnscheck` by using the `-f` option.
+A custom fingerprints JSON file can be passed to `dnscheck` by using the `-f` option.
 
-TODO: document fingerprints format, for now, just refer to the current file in `checks/services.json`.
+The fingerprints file must have the following format:
+```json
+{
+  "services": [
+    {
+      "name": "ngrok",
+      "cnames": [
+        ".ngrok.io"
+      ],
+      "patterns": [
+        " not found"
+      ]
+    }
+  ]
+}
+```
+
+Each vulnerable service fingerprint has the following fields:
+- `name`: the name of the vulnerable service
+- `cnames`: a list of (sub)domains known to be possibly vulnerable for the service (if any)
+- `patterns`: a list of HTTP response strings which indicate an unclaimed resource (if any)
+
+If `patterns` is an empty list, detection will be based on HTTP responses only, and if `cnames`
+is an empty list, detection will be based on CNAME records values only. At least one of `cnames`
+and `patterns` should be a non-empty list. If both are non-empty lists, both the CNAME _and_
+the HTTP response should match the provided values to indicate a vulnerable domain.
+
+In the example above, a vulnerable record needs to have a CNAME pointing to `*.ngrok.io`, and
+when an HTTP(S) request is performed on the domain, the response should contain ` not found`.
 
 ## Alternatives
 - [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz)
