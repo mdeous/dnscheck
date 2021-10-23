@@ -222,7 +222,7 @@ Temporary Items
 .apdisk
 
 ### Project Ignored Files
-dnscheck
+dnscheck-*
 domains.txt
 results.json
 build
