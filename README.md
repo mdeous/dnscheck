@@ -63,11 +63,12 @@ Usage:
   dnscheck check [flags]
 
 Flags:
-  -d, --domains string      file containing domains to check
+  -d, --domains string      file containing domains to check (default "domains.txt")
   -h, --help                help for check
   -n, --nameserver string   server and port to use for name resolution (default "8.8.8.8:53")
   -o, --output string       file to write findings to
   -S, --ssl                 use HTTPS when connecting to targets
+  -t, --timeout uint        timeout for HTTP requests (default 10)
   -w, --workers int         amount of concurrent workers (default 10)
 
 Global Flags:
