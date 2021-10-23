@@ -31,7 +31,7 @@ jobs:
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/dnscheck_*"
+          artifacts: "build/dnscheck-*"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           omitBody:  true
