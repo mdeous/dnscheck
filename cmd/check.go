@@ -82,7 +82,7 @@ var checkCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
-	checkCmd.Flags().StringP("domains", "d", "", "file containing domains to check")
+	checkCmd.Flags().StringP("domains", "d", "domains.txt", "file containing domains to check")
 	err := checkCmd.MarkFlagRequired("domains")
 	if err != nil {
 		log.Fatal(err.Error())
