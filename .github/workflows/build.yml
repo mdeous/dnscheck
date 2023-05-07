@@ -6,9 +6,6 @@ on:
     branches:
       - main
 
-env:
-  GOPATH: /home/runner/work/dnscheck/go
-
 jobs:
 
   build:
@@ -24,7 +21,6 @@ jobs:
         with:
           fetch-depth: 1
           submodules: true
-          path: go/src/github.com/mdeous/dnscheck
 
       - name: Set up Go
         uses: actions/setup-go@v4
