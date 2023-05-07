@@ -51,25 +51,25 @@ type Checker struct {
 	Domains    chan string
 }
 
-func (d *Checker) verbose(format string, values ...interface{}) {
-	if d.cfg.Verbose {
+func (c *Checker) verbose(format string, values ...interface{}) {
+	if c.cfg.Verbose {
 		log.Debug(format, values...)
 	}
 }
 
-func (d *Checker) checkPatterns(domain string, httpBody string, patterns []string) (*Finding, string, error) {
+func (c *Checker) checkPatterns(domain string, httpBody string, patterns []string) (*Finding, string, error) {
 	var err error
 	protocol := "http"
-	if d.cfg.UseSSL {
+	if c.cfg.UseSSL {
 		protocol += "s"
 	}
 	for _, pattern := range patterns {
 		if httpBody == "" {
 			url := protocol + "://" + domain
-			d.verbose("%s: Fetching content of %s", domain, url)
-			httpBody, err = utils.HttpGet(url, d.cfg.HttpTimeout)
+			c.verbose("%s: Fetching content of %s", domain, url)
+			httpBody, err = utils.HttpGet(url, c.cfg.HttpTimeout)
 			if err != nil {
-				d.verbose(err.Error())
+				c.verbose(err.Error())
 				return nil, "", err
 			}
 		}
@@ -84,7 +84,7 @@ func (d *Checker) checkPatterns(domain string, httpBody string, patterns []strin
 	return nil, httpBody, nil
 }
 
-func (d *Checker) checkCNAME(domain string) (*Finding, error) {
+func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 	var (
 		err            error
 		httpBody       string
@@ -92,30 +92,30 @@ func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 		cnameHttpError bool
 	)
 
-	cnames, err := dns.GetCNAME(domain, d.cfg.Nameserver)
+	cnames, err := dns.GetCNAME(domain, c.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
 
-	resolves := dns.DomainResolves(domain, d.cfg.Nameserver)
+	resolves := dns.DomainResolves(domain, c.cfg.Nameserver)
 
 	var matchedServiceWithPatterns bool
 
 	if len(cnames) > 0 {
 		// target has CNAME records
-		d.verbose("%s: Found CNAME record: %s", domain, strings.Join(cnames, ", "))
+		c.verbose("%s: Found CNAME record: %s", domain, strings.Join(cnames, ", "))
 		for _, cname := range cnames {
 			matchedServiceWithPatterns = false
 			cnameHttpError = false
-			for _, service := range d.services {
+			for _, service := range c.services {
 				if len(service.CNames) > 0 {
 					for _, serviceCname := range service.CNames {
 						if strings.HasSuffix(cname, serviceCname) {
-							d.verbose("%s: CNAME %s matches known service: %s", domain, cname, service.Name)
+							c.verbose("%s: CNAME %s matches known service: %s", domain, cname, service.Name)
 							if resolves && len(service.Patterns) > 0 {
 								// CNAME record matches a known service for which we have signatures
 								if !cnameHttpError {
-									finding, httpBody, err = d.checkPatterns(domain, httpBody, service.Patterns)
+									finding, httpBody, err = c.checkPatterns(domain, httpBody, service.Patterns)
 									if err != nil {
 										cnameHttpError = true
 									} else {
@@ -145,7 +145,7 @@ func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 			}
 
 			if !matchedServiceWithPatterns {
-				d.verbose("%s: Checking CNAME target availability: %s", domain, cname)
+				c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
 				// extract root domain from CNAME target
 				rootDomain, err := publicsuffix.EffectiveTLDPlusOne(cname)
 				if err != nil {
@@ -153,14 +153,14 @@ func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 					continue
 				}
 				// check if domain resolves
-				rootResolves := dns.DomainResolves(rootDomain, d.cfg.Nameserver)
+				rootResolves := dns.DomainResolves(rootDomain, c.cfg.Nameserver)
 				if err != nil {
 					log.Warn("Error while resolving %s: %v", rootDomain, err)
 					continue
 				}
 				if !rootResolves {
 					// domain does not resolve, does it have an SOA record?
-					soaRecords, err := dns.GetSOA(rootDomain, d.cfg.Nameserver)
+					soaRecords, err := dns.GetSOA(rootDomain, c.cfg.Nameserver)
 					if err != nil {
 						log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
 						continue
@@ -182,10 +182,10 @@ func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 	} else {
 		// target has no CNAME records, check patterns for services that don't need one
 		if resolves {
-			d.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
-			for _, service := range d.services {
+			c.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
+			for _, service := range c.services {
 				if len(service.CNames) == 0 {
-					finding, httpBody, err = d.checkPatterns(domain, httpBody, service.Patterns)
+					finding, httpBody, err = c.checkPatterns(domain, httpBody, service.Patterns)
 					if err != nil {
 						break
 					}
@@ -201,12 +201,12 @@ func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 	}
 
 	// no issue found
-	d.verbose("%s: No possible takeover found", domain)
+	c.verbose("%s: No possible takeover found", domain)
 	return nil, nil
 }
 
-func (d *Checker) checkNS(domain string) (*Finding, error) {
-	if dns.DomainIsSERVFAIL(domain, d.cfg.Nameserver) {
+func (c *Checker) checkNS(domain string) (*Finding, error) {
+	if dns.DomainIsSERVFAIL(domain, c.cfg.Nameserver) {
 		finding := &Finding{
 			Domain:  domain,
 			Target:  NoNameserver,
@@ -219,20 +219,20 @@ func (d *Checker) checkNS(domain string) (*Finding, error) {
 	return nil, nil
 }
 
-func (d *Checker) scanWorker() {
-	defer d.wg.Done()
+func (c *Checker) scanWorker() {
+	defer c.wg.Done()
 	var (
 		finding *Finding
 		err     error
 	)
-	for domain := range d.Domains {
+	for domain := range c.Domains {
 		log.Info("Checking %s", domain)
-		for _, checkFunc := range d.checkFuncs {
+		for _, checkFunc := range c.checkFuncs {
 			if finding, err = checkFunc(domain); err != nil {
 				log.Warn(err.Error())
 			} else {
 				if finding != nil {
-					d.results <- finding
+					c.results <- finding
 					break
 				}
 			}
@@ -240,21 +240,21 @@ func (d *Checker) scanWorker() {
 	}
 }
 
-func (d *Checker) Scan() {
+func (c *Checker) Scan() {
 	// start workers
-	for i := 1; i <= d.cfg.Workers; i++ {
-		d.wg.Add(1)
-		go d.scanWorker()
+	for i := 1; i <= c.cfg.Workers; i++ {
+		c.wg.Add(1)
+		go c.scanWorker()
 	}
 	// wait for workers to finish and close results channel
 	go func() {
-		d.wg.Wait()
-		close(d.results)
+		c.wg.Wait()
+		close(c.results)
 	}()
 }
 
-func (d *Checker) Results() <-chan *Finding {
-	return d.results
+func (c *Checker) Results() <-chan *Finding {
+	return c.results
 }
 
 func NewChecker(config *Config) *Checker {
