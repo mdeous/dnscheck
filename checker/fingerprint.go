@@ -20,9 +20,9 @@ type Fingerprint struct {
 	Vulnerable bool     `json:"vulnerable"`
 }
 
-func LoadFingerprints(customFile string) []Fingerprint {
+func LoadFingerprints(customFile string) []*Fingerprint {
 	//var data Data
-	var fingerprints []Fingerprint
+	var fingerprints []*Fingerprint
 	var fpData []byte
 	if customFile != "" {
 		// load fingerprints from user-provided file

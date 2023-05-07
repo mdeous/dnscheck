@@ -7,11 +7,11 @@ import (
 )
 
 type Finding struct {
-	Domain      string      `json:"domain"`
-	Target      string      `json:"target"`
-	Service     string      `json:"service"`
-	Type        IssueType   `json:"type"`
-	Fingerprint Fingerprint `json:"fingerprint"`
+	Domain      string       `json:"domain"`
+	Target      string       `json:"target"`
+	Service     string       `json:"service"`
+	Type        IssueType    `json:"type"`
+	Fingerprint *Fingerprint `json:"fingerprint"`
 }
 
 type Findings struct {

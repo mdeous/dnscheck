@@ -127,6 +127,34 @@ func DomainIsNXDOMAIN(domain string, nameserver string) bool {
 	return ret.Rcode == dns.RcodeNameError
 }
 
+func DomainIsAvailable(domain, nameserver string) (bool, error) {
+	// extract root domain from CNAME target
+	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
+	if err != nil {
+		log.Warn("Unable to get root domain for %s: %v", domain, err)
+		return false, err
+	}
+	// check if domain resolves
+	resolveResults := ResolveDomain(rootDomain, nameserver)
+	if err != nil {
+		log.Warn("Error while resolving %s: %v", rootDomain, err)
+		return false, err
+	}
+	if len(resolveResults) == 0 {
+		// domain does not resolve, does it have an SOA record?
+		soaRecords, err := GetSOA(rootDomain, nameserver)
+		if err != nil {
+			log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
+			return false, err
+		}
+		if len(soaRecords) == 0 {
+			// CNAME target root domain has no SOA and does not resolve, might be available to registration
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func ResolveDomain(domain string, nameserver string) []string {
 	resolver := &net.Resolver{
 		PreferGo: true,
