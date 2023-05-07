@@ -2,8 +2,8 @@ package checker
 
 import (
 	"github.com/mdeous/dnscheck/dns"
-	"github.com/mdeous/dnscheck/log"
-	"github.com/mdeous/dnscheck/utils"
+	"github.com/mdeous/dnscheck/internal/log"
+	"github.com/mdeous/dnscheck/internal/utils"
 	"strings"
 )
 

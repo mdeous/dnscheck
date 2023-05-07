@@ -1,14 +1,10 @@
 package utils
 
 import (
-	"bufio"
 	"crypto/tls"
 	"fmt"
-	"github.com/mdeous/dnscheck/log"
 	"io"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -35,31 +31,6 @@ func httpGet(domain string, timeout uint) (*http.Response, error) {
 		}
 	}
 	return nil, err
-}
-
-func ReadLines(file string, output chan<- string) {
-	defer close(output)
-	fd, err := os.Open(file)
-	if err != nil {
-		log.Fatal("Unable to read input file %s: %v", file, err)
-	}
-	defer func(fd *os.File) {
-		err := fd.Close()
-		if err != nil {
-			log.Warn("Unable to close input file %s: %v", file, err)
-		}
-	}(fd)
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		line := strings.Trim(scanner.Text(), " \r\n")
-		if len(line) > 0 {
-			output <- line
-		}
-	}
-	err = scanner.Err()
-	if err != nil {
-		log.Fatal("Error while reading input file %s: %v", file, err)
-	}
 }
 
 func HttpGetBody(domain string, timeout uint) (string, error) {

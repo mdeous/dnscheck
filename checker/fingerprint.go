@@ -3,7 +3,7 @@ package checker
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/mdeous/dnscheck/log"
+	"github.com/mdeous/dnscheck/internal/log"
 	"io"
 	"net/http"
 	"os"

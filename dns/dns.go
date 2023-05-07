@@ -3,7 +3,7 @@ package dns
 import (
 	"context"
 	"fmt"
-	"github.com/mdeous/dnscheck/log"
+	"github.com/mdeous/dnscheck/internal/log"
 	"github.com/miekg/dns"
 	"golang.org/x/net/publicsuffix"
 	"net"

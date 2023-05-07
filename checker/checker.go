@@ -1,7 +1,7 @@
 package checker
 
 import (
-	"github.com/mdeous/dnscheck/log"
+	"github.com/mdeous/dnscheck/internal/log"
 	"sync"
 )
 
