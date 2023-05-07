@@ -27,12 +27,10 @@ jobs:
           go-version: ^1.16
 
       - name: Install gox
-        run: go get github.com/mitchellh/gox
+        run: go install github.com/mitchellh/gox@latest
 
       - name: Build
         run: make cross-compile
-        env:
-          PATH: "${GOPATH}/bin:${PATH}"
 
       - name: Create release
         uses: ncipollo/release-action@v1
