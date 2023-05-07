@@ -47,7 +47,7 @@ type Checker struct {
 	fingerprints []Fingerprint
 	wg           sync.WaitGroup
 	checkFuncs   []func(string) (*Finding, error)
-	results      chan *Finding
+	findings     chan *Finding
 	Domains      chan string
 }
 
@@ -231,7 +231,7 @@ func (c *Checker) scanWorker() {
 				log.Warn(err.Error())
 			} else {
 				if finding != nil {
-					c.results <- finding
+					c.findings <- finding
 					break
 				}
 			}
@@ -248,12 +248,12 @@ func (c *Checker) Scan() {
 	// wait for workers to finish and close results channel
 	go func() {
 		c.wg.Wait()
-		close(c.results)
+		close(c.findings)
 	}()
 }
 
-func (c *Checker) Results() <-chan *Finding {
-	return c.results
+func (c *Checker) Findings() <-chan *Finding {
+	return c.findings
 }
 
 func NewChecker(config *Config) *Checker {
@@ -261,7 +261,7 @@ func NewChecker(config *Config) *Checker {
 		cfg:          config,
 		fingerprints: LoadFingerprints(config.CustomFpFile),
 		Domains:      make(chan string),
-		results:      make(chan *Finding),
+		findings:     make(chan *Finding),
 	}
 	d.checkFuncs = []func(string) (*Finding, error){
 		d.checkCNAME,
