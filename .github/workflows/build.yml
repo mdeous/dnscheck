@@ -7,6 +7,7 @@ on:
       - main
 
 jobs:
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -14,8 +15,11 @@ jobs:
       actions: read
       contents: read
       pull-requests: read
+
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - name: Set up Go
         uses: actions/setup-go@v2
