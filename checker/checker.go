@@ -129,11 +129,12 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 							} else {
 								// CNAME matches a known service and we have no signatures to check
 								finding = &Finding{
-									Domain:  domain,
-									Target:  cname,
-									Service: fp.Name,
-									Type:    IssueCnameTakeover,
-									Method:  MethodCnameOnly,
+									Domain:      domain,
+									Target:      cname,
+									Service:     fp.Name,
+									Type:        IssueCnameTakeover,
+									Method:      MethodCnameOnly,
+									Fingerprint: fp,
 								}
 								return finding, nil
 							}
