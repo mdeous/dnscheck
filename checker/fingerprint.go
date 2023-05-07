@@ -13,7 +13,7 @@ const FingerprintsUrl = "https://raw.githubusercontent.com/EdOverflow/can-i-take
 
 type Fingerprint struct {
 	CNames     []string `json:"cname"`
-	Patterns   []string `json:"fingerprint"`
+	Pattern    string   `json:"fingerprint"`
 	HttpStatus int      `json:"http_status"`
 	NXDomain   bool     `json:"nxdomain"`
 	Name       string   `json:"service"`

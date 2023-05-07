@@ -11,19 +11,6 @@ import (
 	"time"
 )
 
-func makeResolver(nameserver string) *net.Resolver {
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Millisecond * time.Duration(1000),
-			}
-			return d.DialContext(ctx, network, nameserver)
-		},
-	}
-	return resolver
-}
-
 func GetCNAME(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(domain+".", dns.TypeCNAME)
@@ -129,11 +116,30 @@ func DomainIsSERVFAIL(domain string, nameserver string) bool {
 	return false
 }
 
-func DomainResolves(domain string, nameserver string) bool {
-	resolver := makeResolver(nameserver)
-	ips, err := resolver.LookupHost(context.Background(), domain)
+func DomainIsNXDOMAIN(domain string, nameserver string) bool {
+	msg := new(dns.Msg)
+	msg.SetQuestion(domain+".", dns.TypeA)
+	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
+		log.Warn("%s: type A request to check NXDOMAIN failed: %v", domain, err)
 		return false
 	}
-	return len(ips) > 0
+	return ret.Rcode == dns.RcodeNameError
+}
+
+func ResolveDomain(domain string, nameserver string) []string {
+	resolver := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Millisecond * time.Duration(1000),
+			}
+			return d.DialContext(ctx, network, nameserver)
+		},
+	}
+	ips, err := resolver.LookupHost(context.Background(), domain)
+	if err != nil {
+		return []string{}
+	}
+	return ips
 }

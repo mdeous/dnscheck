@@ -12,31 +12,19 @@ import (
 type IssueType string
 
 const (
-	IssueTargetNoResolve IssueType = "target might be unclaimed"
+	IssueTargetNoResolve IssueType = "target might be registerable"
 	IssueCnameTakeover             = "points to unclaimed resource"
 	IssueNsTakeover                = "unclaimed zone delegation"
 )
 
-type DetectionMethod string
-
 const (
-	MethodCnameOnly    DetectionMethod = "CNAME only"
-	MethodPatternOnly                  = "response body only"
-	MethodCnamePattern                 = "CNAME + response body"
-	MethodCnameLookup                  = "CNAME target lookup"
-	MethodServfail                     = "SERVFAIL check"
-)
-
-const (
-	NoService    = "n/a"
-	NoTarget     = "no domain"
+	Unspecified  = "n/a"
 	NoNameserver = "no nameserver"
 )
 
 type Config struct {
 	Nameserver   string
 	Verbose      bool
-	UseSSL       bool
 	Workers      int
 	CustomFpFile string
 	HttpTimeout  uint
@@ -57,143 +45,134 @@ func (c *Checker) verbose(format string, values ...interface{}) {
 	}
 }
 
-func (c *Checker) checkPatterns(domain string, httpBody string, patterns []string) (*Finding, string, error) {
-	var err error
-	protocol := "http"
-	if c.cfg.UseSSL {
-		protocol += "s"
+func (c *Checker) checkPattern(domain string, pattern string) (bool, error) {
+	c.verbose("%s: Performing HTTP request to '%s'", domain, domain)
+	httpBody, err := utils.HttpGetBody(domain, c.cfg.HttpTimeout)
+	if err != nil {
+		c.verbose(err.Error())
+		return false, err
 	}
-	for _, pattern := range patterns {
-		if httpBody == "" {
-			url := protocol + "://" + domain
-			c.verbose("%s: Fetching content of %s", domain, url)
-			httpBody, err = utils.HttpGet(url, c.cfg.HttpTimeout)
-			if err != nil {
-				c.verbose(err.Error())
-				return nil, "", err
-			}
-		}
-		if strings.Contains(httpBody, pattern) {
-			finding := &Finding{
-				Domain: domain,
-				Type:   IssueCnameTakeover,
-			}
-			return finding, httpBody, nil
-		}
-	}
-	return nil, httpBody, nil
+	return strings.Contains(httpBody, pattern), nil
 }
 
-func (c *Checker) checkCNAME(domain string) (*Finding, error) {
-	var (
-		err            error
-		httpBody       string
-		finding        *Finding
-		cnameHttpError bool
-	)
+//func (c *Checker) checkAvailableDomain(domain string) (bool, error) {
+//	return false, nil
+//}
 
+func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 	cnames, err := dns.GetCNAME(domain, c.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
 
-	var matchedServiceWithPatterns bool
-
 	if len(cnames) > 0 {
 		// target has CNAME records
 		c.verbose("%s: Found CNAME record: %s", domain, strings.Join(cnames, ", "))
 		for _, cname := range cnames {
-			matchedServiceWithPatterns = false
-			cnameHttpError = false
+			// check if any fingerprint matches
 			for _, fp := range c.fingerprints {
-				if len(fp.CNames) > 0 {
-					for _, serviceCname := range fp.CNames {
-						if strings.HasSuffix(cname, serviceCname) {
-							c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
-							if len(fp.Patterns) > 0 {
-								// CNAME record matches a known service for which we have signatures
-								if !cnameHttpError {
-									finding, httpBody, err = c.checkPatterns(domain, httpBody, fp.Patterns)
-									if err != nil {
-										cnameHttpError = true
-									} else {
-										if finding != nil {
-											finding.Target = cname
-											finding.Service = fp.Name
-											finding.Method = MethodCnamePattern
-											return finding, nil
-										}
-										matchedServiceWithPatterns = true
-									}
-								}
+				for _, serviceCname := range fp.CNames {
+					var vulnerable bool
+					if strings.HasSuffix(cname, serviceCname) {
+						c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
+
+						if fp.NXDomain {
+							if dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
+								vulnerable = true
+							}
+
+						} else if fp.HttpStatus != 0 {
+							statusCode, err := utils.HttpGetStatus(domain, c.cfg.HttpTimeout)
+							if err != nil {
+								log.Warn("%s: Error while checking HTTP status code: %v", domain, err)
 							} else {
-								// CNAME matches a known service and we have no signatures to check
-								finding = &Finding{
-									Domain:      domain,
-									Target:      cname,
-									Service:     fp.Name,
-									Type:        IssueCnameTakeover,
-									Method:      MethodCnameOnly,
-									Fingerprint: fp,
+								if statusCode == fp.HttpStatus {
+									vulnerable = true
 								}
-								return finding, nil
+							}
+
+						} else if len(fp.Pattern) > 0 {
+							matchFound, err := c.checkPattern(domain, fp.Pattern)
+							if err != nil {
+								return nil, err
+							}
+							if matchFound {
+								vulnerable = true
 							}
 						}
+
+						if vulnerable {
+							finding := &Finding{
+								Domain:      domain,
+								Target:      cname,
+								Service:     fp.Name,
+								Type:        IssueCnameTakeover,
+								Fingerprint: fp,
+							}
+							return finding, nil
+						}
 					}
 				}
+				// TODO: check NXDOMAIN
+				// TODO: check HTTP status code
 			}
 
-			if !matchedServiceWithPatterns {
-				c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
-				// extract root domain from CNAME target
-				rootDomain, err := publicsuffix.EffectiveTLDPlusOne(cname)
+			// no fingerprint matched target domain
+
+			c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
+			// extract root domain from CNAME target
+			rootDomain, err := publicsuffix.EffectiveTLDPlusOne(cname)
+			if err != nil {
+				log.Warn("Unable to get root domain for %s: %v", cname, err)
+				continue
+			}
+			// check if domain resolves
+			resolveResults := dns.ResolveDomain(rootDomain, c.cfg.Nameserver)
+			if err != nil {
+				log.Warn("Error while resolving %s: %v", rootDomain, err)
+				continue
+			}
+			if len(resolveResults) == 0 {
+				// domain does not resolve, does it have an SOA record?
+				soaRecords, err := dns.GetSOA(rootDomain, c.cfg.Nameserver)
 				if err != nil {
-					log.Warn("Unable to get root domain for %s: %v", cname, err)
+					log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
 					continue
 				}
-				// check if domain resolves
-				rootResolves := dns.DomainResolves(rootDomain, c.cfg.Nameserver)
-				if err != nil {
-					log.Warn("Error while resolving %s: %v", rootDomain, err)
-					continue
-				}
-				if !rootResolves {
-					// domain does not resolve, does it have an SOA record?
-					soaRecords, err := dns.GetSOA(rootDomain, c.cfg.Nameserver)
-					if err != nil {
-						log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
-						continue
+				if len(soaRecords) == 0 {
+					// CNAME target root domain has no SOA and does not resolve, might be available to registration
+					finding := &Finding{
+						Domain:  domain,
+						Target:  rootDomain,
+						Service: Unspecified,
+						Type:    IssueTargetNoResolve,
 					}
-					if len(soaRecords) == 0 {
-						// CNAME target root domain has no SOA and does not resolve, might be available to registration
-						finding = &Finding{
-							Domain:  domain,
-							Target:  rootDomain,
-							Service: NoService,
-							Type:    IssueTargetNoResolve,
-							Method:  MethodCnameLookup,
-						}
-						return finding, nil
-					}
+					return finding, nil
 				}
 			}
 		}
-	} else {
-		// target has no CNAME records, check patterns for services that don't need one
-		if dns.DomainResolves(domain, c.cfg.Nameserver) {
-			c.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
-			for _, service := range c.fingerprints {
-				if len(service.CNames) == 0 {
-					finding, httpBody, err = c.checkPatterns(domain, httpBody, service.Patterns)
-					if err != nil {
-						break
+
+	}
+
+	// target has no CNAME records, check patterns for services that don't need one
+	resolveResults := dns.ResolveDomain(domain, c.cfg.Nameserver)
+	if len(resolveResults) > 0 {
+		c.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
+		for _, fp := range c.fingerprints {
+			if fp.Vulnerable && len(fp.CNames) == 0 && len(fp.Pattern) > 0 {
+				matchFound, err := c.checkPattern(domain, fp.Pattern)
+				if err != nil {
+					break
+				}
+				if matchFound {
+					finding := &Finding{
+						Domain:      domain,
+						Target:      strings.Join(resolveResults, ","),
+						Service:     fp.Name,
+						Type:        IssueCnameTakeover,
+						Fingerprint: fp,
 					}
-					if finding != nil {
-						finding.Target = NoTarget
-						finding.Service = service.Name
-						finding.Method = MethodPatternOnly
-						return finding, nil
-					}
+					return finding, nil
 				}
 			}
 		}
@@ -209,9 +188,8 @@ func (c *Checker) checkNS(domain string) (*Finding, error) {
 		finding := &Finding{
 			Domain:  domain,
 			Target:  NoNameserver,
-			Service: NoService,
+			Service: Unspecified,
 			Type:    IssueNsTakeover,
-			Method:  MethodServfail,
 		}
 		return finding, nil
 	}
