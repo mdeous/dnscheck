@@ -113,8 +113,6 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 						}
 					}
 				}
-				// TODO: check NXDOMAIN
-				// TODO: check HTTP status code
 			}
 
 			// no fingerprint matched target domain
@@ -244,6 +242,7 @@ func NewChecker(config *Config) *Checker {
 	d.checkFuncs = []func(string) (*Finding, error){
 		d.checkCNAME,
 		d.checkNS,
+		// TODO: check MX records
 	}
 	return d
 }
