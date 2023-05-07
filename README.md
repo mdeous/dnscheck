@@ -57,15 +57,9 @@ After downloading it, simply make the file executable and run it as described be
 
 ### Checking domains for vulnerabilities
 
-The only mandatory argument is the `-d`/`-domains` one, which should be the path to a file
-containing the list of domains that should be checked. For the other optional options, please
-refer to the help below.
-
-The `-S` option can greatly improve detection, as it attempts to connect to the CNAMEs targets
-using HTTPS instead of plain HTTP.
-
-By default, the results are only displayed on stdout, if you want to save them to a file, you can
-use the `-o` option.
+Domains to be checked can be provided either in bulk via a file passed to the `-D`/`--domains-file`
+argument, or as a single domain passed to the `-d`/`--domain` argument. For nore control over the scan
+behavior, please refer to the other arguments as described below.
 
 Help:
 
@@ -77,13 +71,13 @@ Usage:
   dnscheck check [flags]
 
 Flags:
-  -d, --domains string      file containing domains to check (default "domains.txt")
-  -h, --help                help for check
-  -n, --nameserver string   server and port to use for name resolution (default "8.8.8.8:53")
-  -o, --output string       file to write findings to
-  -S, --ssl                 use HTTPS when connecting to targets
-  -t, --timeout uint        timeout for HTTP requests (default 10)
-  -w, --workers int         amount of concurrent workers (default 10)
+  -d, --domain string         single domain to check
+  -D, --domains-file string   file containing domains to check (default "domains.txt")
+  -h, --help                  help for check
+  -n, --nameserver string     server and port to use for name resolution (default "8.8.8.8:53")
+  -o, --output string         file to write findings to
+  -t, --timeout uint          timeout for HTTP requests (default 10)
+  -w, --workers int           amount of concurrent workers (default 10)
 
 Global Flags:
   -f, --fingerprints string   custom service fingerprints file
@@ -95,42 +89,6 @@ TODO: add an example of output
 ### Monitoring domains
 
 TODO  (not implemented yet)
-
-### Using custom service fingerprints
-
-A custom fingerprints JSON file can be passed to `dnscheck` by using the `-f` option.
-
-The fingerprints file must have the following format:
-
-```json
-{
-  "services": [
-    {
-      "name": "ngrok",
-      "cnames": [
-        ".ngrok.io"
-      ],
-      "patterns": [
-        " not found"
-      ]
-    }
-  ]
-}
-```
-
-Each vulnerable service fingerprint has the following fields:
-
-- `name`: the name of the vulnerable service
-- `cnames`: a list of (sub)domains known to be possibly vulnerable for the service (if any)
-- `patterns`: a list of HTTP response strings which indicate an unclaimed resource (if any)
-
-If `patterns` is an empty list, detection will be based on HTTP responses only, and if `cnames`
-is an empty list, detection will be based on CNAME records values only. At least one of `cnames`
-and `patterns` should be a non-empty list. If both are non-empty lists, both the CNAME _and_
-the HTTP response should match the provided values to indicate a vulnerable domain.
-
-In the example above, a vulnerable record needs to have a CNAME pointing to `*.ngrok.io`, and
-when an HTTP(S) request is performed on the domain, the response should contain ` not found`.
 
 ## Alternatives
 
