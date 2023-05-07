@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/mdeous/dnscheck/log"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -49,7 +49,7 @@ func HttpGet(url string, timeout uint) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to query %s: %v", url, err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("unable to read response body from %s: %v", url, err)
 	}
