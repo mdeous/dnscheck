@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/mdeous/dnscheck/checks"
+	"github.com/mdeous/dnscheck/checker"
 	"github.com/mdeous/dnscheck/log"
 	"github.com/mdeous/dnscheck/utils"
 	"github.com/spf13/cobra"
@@ -47,7 +47,7 @@ var checkCmd = &cobra.Command{
 		}
 
 		// instanciate domain checker
-		checker := checks.NewDomainChecker(&checks.DomainCheckerConfig{
+		chk := checker.NewChecker(&checker.Config{
 			Nameserver:   nameserver,
 			Verbose:      verbose,
 			UseSSL:       useSSL,
@@ -57,12 +57,12 @@ var checkCmd = &cobra.Command{
 		})
 
 		// load target domains
-		go utils.ReadLines(domainFile, checker.Domains)
+		go utils.ReadLines(domainFile, chk.Domains)
 
 		// scan domains and read results
-		var findings []*checks.Finding
-		checker.Scan()
-		for f := range checker.Results() {
+		var findings []*checker.Finding
+		chk.Scan()
+		for f := range chk.Results() {
 			log.Finding("[service: %s] %s %s: %s (method: %s)", f.Service, f.Domain, f.Type, f.Target, f.Method)
 			if output != "" {
 				findings = append(findings, f)
@@ -71,7 +71,7 @@ var checkCmd = &cobra.Command{
 
 		// write results to file
 		if output != "" {
-			data := &checks.Findings{Data: findings}
+			data := &checker.Findings{Data: findings}
 			err := data.Write(output)
 			if err != nil {
 				log.Fatal("Unable to write results: %v", err)

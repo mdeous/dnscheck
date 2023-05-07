@@ -1,4 +1,4 @@
-package checks
+package checker
 
 import (
 	_ "embed"

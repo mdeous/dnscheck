@@ -1,4 +1,4 @@
-package checks
+package checker
 
 import (
 	"github.com/mdeous/dnscheck/dns"
@@ -9,13 +9,31 @@ import (
 	"sync"
 )
 
+type IssueType string
+
+const (
+	IssueTargetNoResolve IssueType = "target might be unclaimed"
+	IssueCnameTakeover             = "points to unclaimed resource"
+	IssueNsTakeover                = "unclaimed zone delegation"
+)
+
+type DetectionMethod string
+
+const (
+	MethodCnameOnly    DetectionMethod = "CNAME only"
+	MethodPatternOnly                  = "response body only"
+	MethodCnamePattern                 = "CNAME + response body"
+	MethodCnameLookup                  = "CNAME target lookup"
+	MethodServfail                     = "SERVFAIL check"
+)
+
 const (
 	NoService    = "n/a"
 	NoTarget     = "no domain"
 	NoNameserver = "no nameserver"
 )
 
-type DomainCheckerConfig struct {
+type Config struct {
 	Nameserver   string
 	Verbose      bool
 	UseSSL       bool
@@ -24,8 +42,8 @@ type DomainCheckerConfig struct {
 	HttpTimeout  uint
 }
 
-type DomainChecker struct {
-	cfg        *DomainCheckerConfig
+type Checker struct {
+	cfg        *Config
 	services   []Service
 	wg         sync.WaitGroup
 	checkFuncs []func(string) (*Finding, error)
@@ -33,13 +51,13 @@ type DomainChecker struct {
 	Domains    chan string
 }
 
-func (d *DomainChecker) verbose(format string, values ...interface{}) {
+func (d *Checker) verbose(format string, values ...interface{}) {
 	if d.cfg.Verbose {
 		log.Debug(format, values...)
 	}
 }
 
-func (d *DomainChecker) checkPatterns(domain string, httpBody string, patterns []string) (*Finding, string, error) {
+func (d *Checker) checkPatterns(domain string, httpBody string, patterns []string) (*Finding, string, error) {
 	var err error
 	protocol := "http"
 	if d.cfg.UseSSL {
@@ -66,7 +84,7 @@ func (d *DomainChecker) checkPatterns(domain string, httpBody string, patterns [
 	return nil, httpBody, nil
 }
 
-func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
+func (d *Checker) checkCNAME(domain string) (*Finding, error) {
 	var (
 		err            error
 		httpBody       string
@@ -187,7 +205,7 @@ func (d *DomainChecker) checkCNAME(domain string) (*Finding, error) {
 	return nil, nil
 }
 
-func (d *DomainChecker) checkNS(domain string) (*Finding, error) {
+func (d *Checker) checkNS(domain string) (*Finding, error) {
 	if dns.DomainIsSERVFAIL(domain, d.cfg.Nameserver) {
 		finding := &Finding{
 			Domain:  domain,
@@ -201,7 +219,7 @@ func (d *DomainChecker) checkNS(domain string) (*Finding, error) {
 	return nil, nil
 }
 
-func (d *DomainChecker) scanWorker() {
+func (d *Checker) scanWorker() {
 	defer d.wg.Done()
 	var (
 		finding *Finding
@@ -222,7 +240,7 @@ func (d *DomainChecker) scanWorker() {
 	}
 }
 
-func (d *DomainChecker) Scan() {
+func (d *Checker) Scan() {
 	// start workers
 	for i := 1; i <= d.cfg.Workers; i++ {
 		d.wg.Add(1)
@@ -235,12 +253,12 @@ func (d *DomainChecker) Scan() {
 	}()
 }
 
-func (d *DomainChecker) Results() <-chan *Finding {
+func (d *Checker) Results() <-chan *Finding {
 	return d.results
 }
 
-func NewDomainChecker(config *DomainCheckerConfig) *DomainChecker {
-	d := &DomainChecker{
+func NewChecker(config *Config) *Checker {
+	d := &Checker{
 		cfg:      config,
 		services: LoadServices(config.CustomFpFile),
 		Domains:  make(chan string),
