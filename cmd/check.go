@@ -29,10 +29,6 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		useSSL, err := cmd.Flags().GetBool("ssl")
-		if err != nil {
-			log.Fatal(err.Error())
-		}
 		workers, err := cmd.Flags().GetInt("workers")
 		if err != nil {
 			log.Fatal(err.Error())
@@ -50,7 +46,6 @@ var checkCmd = &cobra.Command{
 		chk := checker.NewChecker(&checker.Config{
 			Nameserver:   nameserver,
 			Verbose:      verbose,
-			UseSSL:       useSSL,
 			Workers:      workers,
 			CustomFpFile: fpFile,
 			HttpTimeout:  timeout,
@@ -63,7 +58,7 @@ var checkCmd = &cobra.Command{
 		var findings []*checker.Finding
 		chk.Scan()
 		for f := range chk.Findings() {
-			log.Finding("[service: %s] %s %s: %s (method: %s)", f.Service, f.Domain, f.Type, f.Target, f.Method)
+			log.Finding("[service: %s] %s %s: %s", f.Service, f.Domain, f.Type, f.Target)
 			if output != "" {
 				findings = append(findings, f)
 			}
@@ -84,7 +79,6 @@ func init() {
 	rootCmd.AddCommand(checkCmd)
 	checkCmd.Flags().StringP("domains", "d", "domains.txt", "file containing domains to check")
 	checkCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
-	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
 	checkCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")
