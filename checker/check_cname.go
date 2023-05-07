@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-// checkPattern checks if the content of an HTTP GET request against provided domain
-// matches the provided pattern.
 func (c *Checker) checkPattern(domain string, pattern string) (bool, error) {
 	c.verbose("%s: Performing HTTP request to '%s'", domain, domain)
 	httpBody, err := utils.HttpGetBody(domain, c.cfg.HttpTimeout)

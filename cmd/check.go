@@ -21,7 +21,11 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		domainFile, err := cmd.Flags().GetString("domains")
+		singleDomain, err := cmd.Flags().GetString("domain")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		domainFile, err := cmd.Flags().GetString("domains-file")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -51,8 +55,17 @@ var checkCmd = &cobra.Command{
 			HttpTimeout:  timeout,
 		})
 
-		// load target domains
-		go utils.ReadLines(domainFile, chk.Domains)
+		// load target domain(s)
+		if singleDomain != "" {
+			log.Info("Single domain mode (%s)", singleDomain)
+			go func() {
+				chk.Domains <- singleDomain
+				close(chk.Domains)
+			}()
+		} else {
+			log.Info("Multi domains mode (%s)", domainFile)
+			go utils.ReadLines(domainFile, chk.Domains)
+		}
 
 		// scan domains and read results
 		var findings []*checker.Finding
@@ -77,7 +90,8 @@ var checkCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
-	checkCmd.Flags().StringP("domains", "d", "domains.txt", "file containing domains to check")
+	checkCmd.Flags().StringP("domain", "d", "", "single domain to check")
+	checkCmd.Flags().StringP("domains-file", "D", "domains.txt", "file containing domains to check")
 	checkCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
