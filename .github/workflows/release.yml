@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  GOPATH: /home/runner/work/dnscheck/go
+
 jobs:
 
   release:
@@ -17,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 1
           submodules: true
+          path: go/src/github.com/mdeous/dnscheck
 
       - name: Set up Go
         uses: actions/setup-go@v4
