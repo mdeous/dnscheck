@@ -83,10 +83,6 @@ var checkCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(checkCmd)
 	checkCmd.Flags().StringP("domains", "d", "domains.txt", "file containing domains to check")
-	err := checkCmd.MarkFlagRequired("domains")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
 	checkCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
 	checkCmd.Flags().BoolP("ssl", "S", false, "use HTTPS when connecting to targets")
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
