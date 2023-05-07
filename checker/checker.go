@@ -43,12 +43,12 @@ type Config struct {
 }
 
 type Checker struct {
-	cfg        *Config
-	services   []Service
-	wg         sync.WaitGroup
-	checkFuncs []func(string) (*Finding, error)
-	results    chan *Finding
-	Domains    chan string
+	cfg          *Config
+	fingerprints []Fingerprint
+	wg           sync.WaitGroup
+	checkFuncs   []func(string) (*Finding, error)
+	results      chan *Finding
+	Domains      chan string
 }
 
 func (c *Checker) verbose(format string, values ...interface{}) {
@@ -97,8 +97,6 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 		return nil, err
 	}
 
-	resolves := dns.DomainResolves(domain, c.cfg.Nameserver)
-
 	var matchedServiceWithPatterns bool
 
 	if len(cnames) > 0 {
@@ -107,21 +105,21 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 		for _, cname := range cnames {
 			matchedServiceWithPatterns = false
 			cnameHttpError = false
-			for _, service := range c.services {
-				if len(service.CNames) > 0 {
-					for _, serviceCname := range service.CNames {
+			for _, fp := range c.fingerprints {
+				if len(fp.CNames) > 0 {
+					for _, serviceCname := range fp.CNames {
 						if strings.HasSuffix(cname, serviceCname) {
-							c.verbose("%s: CNAME %s matches known service: %s", domain, cname, service.Name)
-							if resolves && len(service.Patterns) > 0 {
+							c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
+							if len(fp.Patterns) > 0 {
 								// CNAME record matches a known service for which we have signatures
 								if !cnameHttpError {
-									finding, httpBody, err = c.checkPatterns(domain, httpBody, service.Patterns)
+									finding, httpBody, err = c.checkPatterns(domain, httpBody, fp.Patterns)
 									if err != nil {
 										cnameHttpError = true
 									} else {
 										if finding != nil {
 											finding.Target = cname
-											finding.Service = service.Name
+											finding.Service = fp.Name
 											finding.Method = MethodCnamePattern
 											return finding, nil
 										}
@@ -133,7 +131,7 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 								finding = &Finding{
 									Domain:  domain,
 									Target:  cname,
-									Service: service.Name,
+									Service: fp.Name,
 									Type:    IssueCnameTakeover,
 									Method:  MethodCnameOnly,
 								}
@@ -181,9 +179,9 @@ func (c *Checker) checkCNAME(domain string) (*Finding, error) {
 		}
 	} else {
 		// target has no CNAME records, check patterns for services that don't need one
-		if resolves {
+		if dns.DomainResolves(domain, c.cfg.Nameserver) {
 			c.verbose("%s: No CNAMEs but domain resolves, checking known patterns", domain)
-			for _, service := range c.services {
+			for _, service := range c.fingerprints {
 				if len(service.CNames) == 0 {
 					finding, httpBody, err = c.checkPatterns(domain, httpBody, service.Patterns)
 					if err != nil {
@@ -259,10 +257,10 @@ func (c *Checker) Results() <-chan *Finding {
 
 func NewChecker(config *Config) *Checker {
 	d := &Checker{
-		cfg:      config,
-		services: LoadServices(config.CustomFpFile),
-		Domains:  make(chan string),
-		results:  make(chan *Finding),
+		cfg:          config,
+		fingerprints: LoadFingerprints(config.CustomFpFile),
+		Domains:      make(chan string),
+		results:      make(chan *Finding),
 	}
 	d.checkFuncs = []func(string) (*Finding, error){
 		d.checkCNAME,
