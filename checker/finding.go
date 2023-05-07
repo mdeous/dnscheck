@@ -3,7 +3,7 @@ package checker
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 type Finding struct {
@@ -23,7 +23,7 @@ func (f *Findings) Write(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("could not marshal results to JSON: %v", err)
 	}
-	err = ioutil.WriteFile(filePath, data, 0600)
+	err = os.WriteFile(filePath, data, 0600)
 	if err != nil {
 		return fmt.Errorf("could not write results to %s: %v", filePath, err)
 	}
