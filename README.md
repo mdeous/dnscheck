@@ -46,7 +46,7 @@ or
 Install the application directly with Go:
 
 ```shell
-go install https://github.com/mdeous/dnscheck
+go install https://github.com/mdeous/dnscheck@latest
 ```
 
 You should then have `dnscheck` available in your `PATH` (assuming you have a properly configured Go environment).
