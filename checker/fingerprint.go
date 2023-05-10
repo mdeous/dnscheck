@@ -11,12 +11,14 @@ import (
 var fpData []byte
 
 type Fingerprint struct {
-	CNames     []string `json:"cname"`
-	Pattern    string   `json:"fingerprint"`
-	HttpStatus int      `json:"http_status"`
-	NXDomain   bool     `json:"nxdomain"`
-	Name       string   `json:"service"`
-	Vulnerable bool     `json:"vulnerable"`
+	CNames        []string `json:"cname"`
+	Discussion    string   `json:"discussion"`
+	Documentation string   `json:"documentation"`
+	Pattern       string   `json:"fingerprint"`
+	HttpStatus    int      `json:"http_status"`
+	NXDomain      bool     `json:"nxdomain"`
+	Name          string   `json:"service"`
+	Vulnerable    bool     `json:"vulnerable"`
 }
 
 func LoadFingerprints(customFile string) []*Fingerprint {
