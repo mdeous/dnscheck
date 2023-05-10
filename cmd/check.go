@@ -68,11 +68,13 @@ var checkCmd = &cobra.Command{
 		}
 
 		// scan domains and read results
-		var findings []*checker.Finding
+		var findings []*checker.DomainFinding
 		chk.Scan()
 		for f := range chk.Findings() {
-			log.Finding("[service: %s] %s %s: %s", f.Service, f.Domain, f.Type, f.Target)
-			if output != "" {
+			for _, match := range f.Matches {
+				log.Finding("[service: %s] %s -> %s [type=%s method=%s]", match.Service, f.Domain, match.Target, match.Type, match.Method)
+			}
+			if len(f.Matches) > 0 && output != "" {
 				findings = append(findings, f)
 			}
 		}

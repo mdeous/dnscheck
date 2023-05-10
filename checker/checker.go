@@ -8,9 +8,20 @@ import (
 type IssueType string
 
 const (
-	IssueTargetNoAuthority IssueType = "target might be registerable"
-	IssueCnameTakeover               = "points to unclaimed resource"
-	IssueNsTakeover                  = "unclaimed zone delegation"
+	IssueDandlingCname IssueType = "dangling_cname_record"
+	IssueDanglingNs              = "dangling_ns_record"
+	IssueUnregistered            = "unregistered_domain"
+)
+
+type DetectionMethod string
+
+const (
+	MethodCnamePattern    DetectionMethod = "cname_body_pattern"
+	MethodCnameNxdomain                   = "cname_nxdomain"
+	MethodCnameHttpStatus                 = "cname_http_status"
+	MethodServfail                        = "servfail"
+	MethodSoaCheck                        = "soa_check"
+	MethodNone                            = "not_vulnerable"
 )
 
 const (
@@ -18,7 +29,7 @@ const (
 	NoNameserver = "no nameserver"
 )
 
-type CheckFunc func(string) ([]*Finding, error)
+type CheckFunc func(string) ([]*Match, error)
 
 type Config struct {
 	Nameserver   string
@@ -33,7 +44,7 @@ type Checker struct {
 	fingerprints []*Fingerprint
 	wg           sync.WaitGroup
 	checkFuncs   []CheckFunc
-	findings     chan *Finding
+	findings     chan *DomainFinding
 	Domains      chan string
 }
 
@@ -46,6 +57,10 @@ func (c *Checker) verbose(format string, values ...interface{}) {
 func (c *Checker) scanWorker() {
 	defer c.wg.Done()
 	for domain := range c.Domains {
+		result := &DomainFinding{
+			Domain:  domain,
+			Matches: make([]*Match, 0),
+		}
 		log.Info("Checking %s", domain)
 		for _, checkFunc := range c.checkFuncs {
 			findings, err := checkFunc(domain)
@@ -53,10 +68,11 @@ func (c *Checker) scanWorker() {
 				log.Warn(err.Error())
 			} else {
 				for _, finding := range findings {
-					c.findings <- finding
+					result.Matches = append(result.Matches, finding)
 				}
 			}
 		}
+		c.findings <- result
 	}
 }
 
@@ -73,7 +89,7 @@ func (c *Checker) Scan() {
 	}()
 }
 
-func (c *Checker) Findings() <-chan *Finding {
+func (c *Checker) Findings() <-chan *DomainFinding {
 	return c.findings
 }
 
@@ -82,7 +98,7 @@ func NewChecker(config *Config) *Checker {
 		cfg:          config,
 		fingerprints: LoadFingerprints(config.CustomFpFile),
 		Domains:      make(chan string),
-		findings:     make(chan *Finding),
+		findings:     make(chan *DomainFinding),
 	}
 	d.checkFuncs = []CheckFunc{
 		d.CheckCNAME,

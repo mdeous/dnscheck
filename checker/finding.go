@@ -6,16 +6,21 @@ import (
 	"os"
 )
 
-type Finding struct {
-	Domain      string       `json:"domain"`
-	Target      string       `json:"target"`
-	Service     string       `json:"service"`
-	Type        IssueType    `json:"type"`
-	Fingerprint *Fingerprint `json:"fingerprint"`
+type Match struct {
+	Target      string          `json:"target"`
+	Service     string          `json:"service"`
+	Type        IssueType       `json:"type"`
+	Method      DetectionMethod `json:"method"`
+	Fingerprint *Fingerprint    `json:"fingerprint"`
+}
+
+type DomainFinding struct {
+	Domain  string   `json:"domain"`
+	Matches []*Match `json:"matches"`
 }
 
 type Findings struct {
-	Data []*Finding `json:"findings"`
+	Data []*DomainFinding `json:"findings"`
 }
 
 func (f *Findings) Write(filePath string) error {
