@@ -6,8 +6,8 @@
 
 `dnscheck` is a tool that reads a list of domains from a file and checks them for the following issues:
 
-- CNAMEs pointing to an unclaimed resource (e.g. S3 bucket, GitHub pages, Azure CloudApp, etc.)
-- CNAMEs pointing to an unregistered domain
+- CNAME records pointing to an unclaimed resource (e.g. S3 bucket, GitHub pages, Azure CloudApp, etc.)
+- CNAME records pointing to an unregistered domain
 - Zone delegations poiting to an unclaimed zone
 
 Detection of CNAMEs pointing to unclaimed resources is based on the information available
