@@ -69,7 +69,6 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					if detectionMethod != MethodNone {
 						finding := &Match{
 							Target:      cname,
-							Service:     fp.Name,
 							Type:        IssueDandlingCname,
 							Method:      detectionMethod,
 							Fingerprint: fp,
@@ -90,7 +89,6 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		if available {
 			finding := &Match{
 				Target:      cname,
-				Service:     Unspecified,
 				Type:        IssueUnregistered,
 				Method:      MethodSoaCheck,
 				Fingerprint: nil,
@@ -113,7 +111,6 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 				if detectionMethod != MethodNone {
 					finding := &Match{
 						Target:      strings.Join(resolveResults, ","),
-						Service:     fp.Name,
 						Type:        IssueDandlingCname,
 						Method:      detectionMethod,
 						Fingerprint: fp,

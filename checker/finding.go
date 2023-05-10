@@ -8,7 +8,6 @@ import (
 
 type Match struct {
 	Target      string          `json:"target"`
-	Service     string          `json:"service"`
 	Type        IssueType       `json:"type"`
 	Method      DetectionMethod `json:"method"`
 	Fingerprint *Fingerprint    `json:"fingerprint"`

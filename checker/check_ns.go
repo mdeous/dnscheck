@@ -8,7 +8,6 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 	if dns.DomainIsSERVFAIL(domain, c.cfg.Nameserver) {
 		finding := &Match{
 			Target:      NoNameserver,
-			Service:     Unspecified,
 			Type:        IssueDanglingNs,
 			Method:      MethodServfail,
 			Fingerprint: nil,
