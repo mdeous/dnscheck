@@ -13,7 +13,7 @@ import (
 
 func GetCNAME(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
-	msg.SetQuestion(domain+".", dns.TypeCNAME)
+	msg.SetQuestion(dns.Fqdn(domain), dns.TypeCNAME)
 	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
@@ -30,7 +30,7 @@ func GetCNAME(domain string, nameserver string) ([]string, error) {
 
 func GetSOA(domain string, nameserver string) ([]string, error) {
 	msg := new(dns.Msg)
-	msg.SetQuestion(domain+".", dns.TypeSOA)
+	msg.SetQuestion(dns.Fqdn(domain), dns.TypeSOA)
 	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
@@ -63,7 +63,7 @@ func GetNS(domain string, nameserver string) ([]string, error) {
 	}
 
 	msg := new(dns.Msg)
-	msg.SetQuestion(domain+".", dns.TypeNS)
+	msg.SetQuestion(dns.Fqdn(domain), dns.TypeNS)
 	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
@@ -104,7 +104,7 @@ func DomainIsSERVFAIL(domain string, nameserver string) bool {
 
 	for _, authority := range domainAuthorities {
 		msg := new(dns.Msg)
-		msg.SetQuestion(domain+".", dns.TypeA)
+		msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
 		ret, err := dns.Exchange(msg, authority)
 		if err != nil {
 			continue
@@ -118,7 +118,7 @@ func DomainIsSERVFAIL(domain string, nameserver string) bool {
 
 func DomainIsNXDOMAIN(domain string, nameserver string) bool {
 	msg := new(dns.Msg)
-	msg.SetQuestion(domain+".", dns.TypeA)
+	msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
 	ret, err := dns.Exchange(msg, nameserver)
 	if err != nil {
 		log.Warn("%s: type A request to check NXDOMAIN failed: %v", domain, err)
