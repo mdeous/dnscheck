@@ -27,11 +27,6 @@ const (
 	MethodNone                            = "not_vulnerable"
 )
 
-const (
-	Unspecified  = "n/a"
-	NoNameserver = "no nameserver"
-)
-
 type CheckFunc func(string) ([]*Match, error)
 
 type Config struct {
