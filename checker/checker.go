@@ -16,9 +16,12 @@ const (
 type DetectionMethod string
 
 const (
-	MethodCnamePattern    DetectionMethod = "cname_body_pattern"
-	MethodCnameNxdomain                   = "cname_nxdomain"
-	MethodCnameHttpStatus                 = "cname_http_status"
+	MethodPattern         DetectionMethod = "body_pattern"
+	MethodNxdomain                        = "nxdomain"
+	MethodHttpStatus                      = "http_status"
+	MethodCnamePattern                    = "cname_" + MethodPattern
+	MethodCnameNxdomain                   = "cname_" + MethodNxdomain
+	MethodCnameHttpStatus                 = "cname_" + MethodHttpStatus
 	MethodServfail                        = "servfail"
 	MethodSoaCheck                        = "soa_check"
 	MethodNone                            = "not_vulnerable"

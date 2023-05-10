@@ -17,10 +17,13 @@ func (c *Checker) checkPattern(domain string, pattern string) (bool, error) {
 	return strings.Contains(httpBody, pattern), nil
 }
 
-func (c *Checker) checkFingerprint(domain string, fp *Fingerprint) (DetectionMethod, error) {
+func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, hasCname bool) (DetectionMethod, error) {
 	if fp.NXDomain {
 		if dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
-			return MethodCnameNxdomain, nil
+			if hasCname {
+				return MethodCnameNxdomain, nil
+			}
+			return MethodNxdomain, nil
 		}
 
 	} else if fp.HttpStatus != 0 {
@@ -29,7 +32,10 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint) (DetectionMet
 			return MethodNone, fmt.Errorf("error while checking HTTP status code for %s: %v", domain, err)
 		} else {
 			if statusCode == fp.HttpStatus {
-				return MethodCnameHttpStatus, nil
+				if hasCname {
+					return MethodCnameHttpStatus, nil
+				}
+				return MethodHttpStatus, nil
 			}
 		}
 
@@ -39,7 +45,10 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint) (DetectionMet
 			return MethodNone, fmt.Errorf("error while checking body fingerprint for %s: %v", domain, err)
 		}
 		if patternMatches {
-			return MethodCnamePattern, nil
+			if hasCname {
+				return MethodCnamePattern, nil
+			}
+			return MethodPattern, nil
 		}
 	}
 	return MethodNone, nil
@@ -62,7 +71,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 			for _, serviceCname := range fp.CNames {
 				if strings.HasSuffix(cname, serviceCname) {
 					c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
-					detectionMethod, err := c.checkFingerprint(domain, fp)
+					detectionMethod, err := c.checkFingerprint(domain, fp, true)
 					if err != nil {
 						continue
 					}
@@ -104,7 +113,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
 			if fp.Vulnerable && len(fp.CNames) == 0 {
-				detectionMethod, err := c.checkFingerprint(domain, fp)
+				detectionMethod, err := c.checkFingerprint(domain, fp, false)
 				if err != nil {
 					continue
 				}
