@@ -41,13 +41,15 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint) (bool, error)
 }
 
 // CheckCNAME checks if the CNAME entries for the provided domain are vulnerable
-func (c *Checker) CheckCNAME(domain string) (*Finding, error) {
+func (c *Checker) CheckCNAME(domain string) ([]*Finding, error) {
 	cnames, err := dns.GetCNAME(domain, c.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
+	var findings []*Finding
 
 	// target has CNAME records
+	cnameMatch := false
 	for _, cname := range cnames {
 		c.verbose("%s: Found CNAME record: %s", domain, cname)
 		// check if any fingerprint matches
@@ -67,7 +69,8 @@ func (c *Checker) CheckCNAME(domain string) (*Finding, error) {
 							Type:        IssueCnameTakeover,
 							Fingerprint: fp,
 						}
-						return finding, nil
+						findings = append(findings, finding)
+						cnameMatch = true
 					}
 				}
 			}
@@ -87,13 +90,14 @@ func (c *Checker) CheckCNAME(domain string) (*Finding, error) {
 				Type:        IssueTargetNoAuthority,
 				Fingerprint: nil,
 			}
-			return finding, nil
+			findings = append(findings, finding)
+			cnameMatch = true
 		}
 	}
 
 	// target has no CNAME records, check fingerprints that don't expect one
 	resolveResults := dns.ResolveDomain(domain, c.cfg.Nameserver)
-	if len(resolveResults) > 0 {
+	if len(resolveResults) > 0 && !cnameMatch {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
 			if fp.Vulnerable && len(fp.CNames) == 0 {
@@ -109,7 +113,7 @@ func (c *Checker) CheckCNAME(domain string) (*Finding, error) {
 						Type:        IssueCnameTakeover,
 						Fingerprint: fp,
 					}
-					return finding, nil
+					findings = append(findings, finding)
 				}
 			}
 		}
@@ -117,5 +121,5 @@ func (c *Checker) CheckCNAME(domain string) (*Finding, error) {
 
 	// no issue found
 	c.verbose("%s: No possible takeover found", domain)
-	return nil, nil
+	return findings, nil
 }

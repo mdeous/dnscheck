@@ -3,7 +3,8 @@ package checker
 import "github.com/mdeous/dnscheck/dns"
 
 // CheckNS checks if provided domain has dangling NS records
-func (c *Checker) CheckNS(domain string) (*Finding, error) {
+func (c *Checker) CheckNS(domain string) ([]*Finding, error) {
+	var findings []*Finding
 	if dns.DomainIsSERVFAIL(domain, c.cfg.Nameserver) {
 		finding := &Finding{
 			Domain:  domain,
@@ -11,7 +12,7 @@ func (c *Checker) CheckNS(domain string) (*Finding, error) {
 			Service: Unspecified,
 			Type:    IssueNsTakeover,
 		}
-		return finding, nil
+		findings = append(findings, finding)
 	}
-	return nil, nil
+	return findings, nil
 }

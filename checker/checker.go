@@ -18,6 +18,8 @@ const (
 	NoNameserver = "no nameserver"
 )
 
+type CheckFunc func(string) ([]*Finding, error)
+
 type Config struct {
 	Nameserver   string
 	Verbose      bool
@@ -30,7 +32,7 @@ type Checker struct {
 	cfg          *Config
 	fingerprints []*Fingerprint
 	wg           sync.WaitGroup
-	checkFuncs   []func(string) (*Finding, error)
+	checkFuncs   []CheckFunc
 	findings     chan *Finding
 	Domains      chan string
 }
@@ -43,19 +45,15 @@ func (c *Checker) verbose(format string, values ...interface{}) {
 
 func (c *Checker) scanWorker() {
 	defer c.wg.Done()
-	var (
-		finding *Finding
-		err     error
-	)
 	for domain := range c.Domains {
 		log.Info("Checking %s", domain)
 		for _, checkFunc := range c.checkFuncs {
-			if finding, err = checkFunc(domain); err != nil {
+			findings, err := checkFunc(domain)
+			if err != nil {
 				log.Warn(err.Error())
 			} else {
-				if finding != nil {
+				for _, finding := range findings {
 					c.findings <- finding
-					break
 				}
 			}
 		}
@@ -86,7 +84,7 @@ func NewChecker(config *Config) *Checker {
 		Domains:      make(chan string),
 		findings:     make(chan *Finding),
 	}
-	d.checkFuncs = []func(string) (*Finding, error){
+	d.checkFuncs = []CheckFunc{
 		d.CheckCNAME,
 		d.CheckNS,
 	}
