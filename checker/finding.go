@@ -6,6 +6,28 @@ import (
 	"os"
 )
 
+type IssueType string
+
+const (
+	IssueDandlingCname IssueType = "dangling_cname_record"
+	IssueDanglingNs              = "dangling_ns_record"
+	IssueUnregistered            = "unregistered_domain"
+)
+
+type DetectionMethod string
+
+const (
+	MethodPattern         DetectionMethod = "body_pattern"
+	MethodNxdomain                        = "nxdomain"
+	MethodHttpStatus                      = "http_status"
+	MethodCnamePattern                    = "cname_body_pattern"
+	MethodCnameNxdomain                   = "cname_nxdomain"
+	MethodCnameHttpStatus                 = "cname_http_status"
+	MethodServfail                        = "servfail"
+	MethodSoaCheck                        = "soa_check"
+	MethodNone                            = "not_vulnerable"
+)
+
 type Match struct {
 	Target      string          `json:"target"`
 	Type        IssueType       `json:"type"`
