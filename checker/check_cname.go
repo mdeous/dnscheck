@@ -7,63 +7,72 @@ import (
 	"strings"
 )
 
-func (c *Checker) checkPattern(domain string, pattern string) (bool, error) {
-	c.verbose("%s: Performing HTTP request to '%s'", domain, domain)
-	httpBody, err := utils.HttpGetBody(domain, c.cfg.HttpTimeout)
-	if err != nil {
-		c.verbose(err.Error())
-		return false, err
+func (c *Checker) checkPattern(domain string, pattern string, body string) (bool, string, error) {
+	var err error
+	if body == "" {
+		c.verbose("%s: Performing HTTP request to '%s'", domain, domain)
+		body, err = utils.HttpGetBody(domain, c.cfg.HttpTimeout)
+		if err != nil {
+			c.verbose(err.Error())
+			return false, "", err
+		}
 	}
-	return strings.Contains(httpBody, pattern), nil
+
+	return strings.Contains(body, pattern), body, nil
 }
 
-func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, hasCname bool) (DetectionMethod, error) {
+func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, hasCname bool) (DetectionMethod, string, error) {
+	var err error
 	if fp.NXDomain {
 		if dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
 			if hasCname {
-				return MethodCnameNxdomain, nil
+				return MethodCnameNxdomain, body, nil
 			}
-			return MethodNxdomain, nil
+			return MethodNxdomain, body, nil
 		}
 
 	} else if fp.HttpStatus != 0 {
 		statusCode, err := utils.HttpGetStatus(domain, c.cfg.HttpTimeout)
 		if err != nil {
-			return MethodNone, fmt.Errorf("error while checking HTTP status code for %s: %v", domain, err)
+			return MethodNone, body, fmt.Errorf("error while checking HTTP status code for %s: %v", domain, err)
 		} else {
 			if statusCode == fp.HttpStatus {
 				if hasCname {
-					return MethodCnameHttpStatus, nil
+					return MethodCnameHttpStatus, body, nil
 				}
-				return MethodHttpStatus, nil
+				return MethodHttpStatus, body, nil
 			}
 		}
 
 	} else if len(fp.Pattern) > 0 {
-		patternMatches, err := c.checkPattern(domain, fp.Pattern)
+		var patternMatches bool
+		patternMatches, body, err = c.checkPattern(domain, fp.Pattern, body)
 		if err != nil {
-			return MethodNone, fmt.Errorf("error while checking body fingerprint for %s: %v", domain, err)
+			return MethodNone, body, fmt.Errorf("error while checking body fingerprint for %s: %v", domain, err)
 		}
 		if patternMatches {
 			if hasCname {
-				return MethodCnamePattern, nil
+				return MethodCnamePattern, body, nil
 			}
-			return MethodPattern, nil
+			return MethodPattern, body, nil
 		}
 	}
-	return MethodNone, nil
+	return MethodNone, body, nil
 }
 
 // CheckCNAME checks if the CNAME entries for the provided domain are vulnerable
 func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
+	var err error
 	cnames, err := dns.GetCNAME(domain, c.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
 	var findings []*Match
+	var detectionMethod DetectionMethod
 
 	// target has CNAME records
 	cnameMatch := false
+	body := ""
 	for _, cname := range cnames {
 		c.verbose("%s: Found CNAME record: %s", domain, cname)
 		// check if any fingerprint matches
@@ -71,7 +80,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 			for _, serviceCname := range fp.CNames {
 				if strings.HasSuffix(cname, serviceCname) {
 					c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
-					detectionMethod, err := c.checkFingerprint(domain, fp, true)
+					detectionMethod, body, err = c.checkFingerprint(domain, fp, body, true)
 					if err != nil {
 						continue
 					}
@@ -113,7 +122,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
 			if fp.Vulnerable && len(fp.CNames) == 0 {
-				detectionMethod, err := c.checkFingerprint(domain, fp, false)
+				detectionMethod, body, err = c.checkFingerprint(domain, fp, body, false)
 				if err != nil {
 					continue
 				}
