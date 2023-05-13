@@ -72,7 +72,11 @@ var checkCmd = &cobra.Command{
 		chk.Scan()
 		for f := range chk.Findings() {
 			for _, match := range f.Matches {
-				log.Finding("[service: %s] %s -> %s [type=%s method=%s]", match.Fingerprint.Name, f.Domain, match.Target, match.Type, match.Method)
+				fpName := "n/a"
+				if match.Fingerprint != nil {
+					fpName = match.Fingerprint.Name
+				}
+				log.Finding("[service: %s] %s -> %s [type=%s method=%s]", fpName, f.Domain, match.Target, match.Type, match.Method)
 			}
 			if len(f.Matches) > 0 && output != "" {
 				findings = append(findings, f)
