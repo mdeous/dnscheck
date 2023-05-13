@@ -7,7 +7,7 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "dnscheck",
-	Short: "Domain hijacking assessment tool",
+	Short: "Subdomain takeover assessment tool",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

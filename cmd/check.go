@@ -10,7 +10,7 @@ import (
 // checkCmd represents the check command
 var checkCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Check for vulnerable domains",
+	Short: "Search for possible subdomain takeovers",
 	Run: func(cmd *cobra.Command, args []string) {
 		// get command-line arguments
 		verbose, err := cmd.Flags().GetBool("verbose")
