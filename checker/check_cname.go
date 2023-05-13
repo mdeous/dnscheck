@@ -139,7 +139,8 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		}
 	}
 
-	// no issue found
-	c.verbose("%s: No possible takeover found", domain)
+	if len(findings) == 0 {
+		c.verbose("%s: No dangling CNAME record found", domain)
+	}
 	return findings, nil
 }

@@ -14,5 +14,8 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		}
 		findings = append(findings, finding)
 	}
+	if len(findings) == 0 {
+		c.verbose("%s: No dangling NS record found", domain)
+	}
 	return findings, nil
 }
