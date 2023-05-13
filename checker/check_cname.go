@@ -71,7 +71,6 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	var detectionMethod DetectionMethod
 
 	// target has CNAME records
-	cnameMatch := false
 	body := ""
 	for _, cname := range cnames {
 		c.verbose("%s: Found CNAME record: %s", domain, cname)
@@ -92,33 +91,33 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 							Fingerprint: fp,
 						}
 						findings = append(findings, finding)
-						cnameMatch = true
 					}
 				}
 			}
 		}
 
-		// no fingerprint matched target domain, check if CNAME target can be registered
-		c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
-		available, err := dns.DomainIsAvailable(cname, c.cfg.Nameserver)
-		if err != nil {
-			continue
-		}
-		if available {
-			finding := &Match{
-				Target:      cname,
-				Type:        IssueUnregistered,
-				Method:      MethodSoaCheck,
-				Fingerprint: nil,
+		if len(findings) == 0 {
+			// no fingerprint matched target domain, check if CNAME target can be registered
+			c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
+			available, err := dns.DomainIsAvailable(cname, c.cfg.Nameserver)
+			if err != nil {
+				continue
 			}
-			findings = append(findings, finding)
-			cnameMatch = true
+			if available {
+				finding := &Match{
+					Target:      cname,
+					Type:        IssueUnregistered,
+					Method:      MethodSoaCheck,
+					Fingerprint: nil,
+				}
+				findings = append(findings, finding)
+			}
 		}
 	}
 
 	// target has no CNAME records, check fingerprints that don't expect one
 	resolveResults := dns.ResolveDomain(domain, c.cfg.Nameserver)
-	if len(resolveResults) > 0 && !cnameMatch {
+	if len(findings) == 0 && len(resolveResults) > 0 {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
 			if fp.Vulnerable && len(fp.CNames) == 0 {
