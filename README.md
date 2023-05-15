@@ -67,7 +67,7 @@ Help:
 
 ```
 ❯ dnscheck check -h
-Check for vulnerable domains
+Search for possible subdomain takeovers
 
 Usage:
   dnscheck check [flags]
@@ -86,7 +86,22 @@ Global Flags:
   -v, --verbose               increase application verbosity
 ```
 
-TODO: add an example of output
+Example output:
+
+```
+❯ ./dnscheck check -v -D target_domains.txt
+2023/05/13 16:57:45 - INFO - Multi domains mode (domains.txt)
+2023/05/13 16:57:45 - INFO - Checking vuln-createsend.something.io
+2023/05/13 16:57:45 - INFO - Checking vuln-s3.something.io
+2023/05/13 16:57:45 - INFO - Checking vuln-beanstalk.something.io
+2023/05/13 16:57:45 - INFO - Checking vuln-unregistered.something.io
+2023/05/13 16:57:45 - INFO - Checking vuln-airee.something.io
+2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: n/a] vuln-unregistered.something.io -> fhjxbgisfubvgbgfusf.io [type=unregistered_domain method=soa_check]
+2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: AWS/Elastic Beanstalk] vuln-beanstalk.something.io -> dkfjbgdf.us-east-1.elasticbeanstalk.com [type=dangling_cname_record method=cname_nxdomain]
+2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: Airee.ru] vuln-airee.something.io -> something-unregistered.airee.ru [type=dangling_cname_record method=cname_body_pattern]
+2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: AWS/S3] vuln-s3.something.io -> skhjfgbidkfgbisdkfghb.s3.amazonaws.com [type=dangling_cname_record method=cname_body_pattern]
+2023/05/13 16:57:46 - VULNERABLE DOMAIN - [service: Campaign Monitor] vuln-createsend.something.io -> 13.52.43.40,54.183.0.47 [type=dangling_cname_record method=body_pattern]
+```
 
 ### Monitoring domains
 
