@@ -67,7 +67,7 @@ func GetNS(domain string, nameserver string) ([]string, error) {
 	if ret.Rcode != dns.RcodeSuccess {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
 	}
-	if len(ret.Answer) == 0 {
+	if len(ret.Answer) > 0 {
 		records = parseRecords(ret.Answer)
 	} else {
 		records = parseRecords(ret.Ns)
