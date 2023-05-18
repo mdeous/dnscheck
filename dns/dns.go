@@ -11,17 +11,20 @@ import (
 	"time"
 )
 
-func GetCNAME(domain string, nameserver string) ([]string, error) {
+func dnsQuery(domain string, nameserver string, reqType uint16) (*dns.Msg, error) {
 	msg := new(dns.Msg)
-	msg.SetQuestion(dns.Fqdn(domain), dns.TypeCNAME)
-	ret, err := dns.Exchange(msg, nameserver)
+	msg.SetQuestion(dns.Fqdn(domain), reqType)
+	return dns.Exchange(msg, nameserver)
+}
+
+func GetCNAME(domain string, nameserver string) ([]string, error) {
+	ret, err := dnsQuery(domain, nameserver, dns.TypeCNAME)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
 	var records []string
 	for _, answer := range ret.Answer {
-		record, isCNAME := answer.(*dns.CNAME)
-		if isCNAME {
+		if record, isCNAME := answer.(*dns.CNAME); isCNAME {
 			records = append(records, strings.TrimRight(record.Target, "."))
 		}
 	}
@@ -29,16 +32,13 @@ func GetCNAME(domain string, nameserver string) ([]string, error) {
 }
 
 func GetSOA(domain string, nameserver string) ([]string, error) {
-	msg := new(dns.Msg)
-	msg.SetQuestion(dns.Fqdn(domain), dns.TypeSOA)
-	ret, err := dns.Exchange(msg, nameserver)
+	ret, err := dnsQuery(domain, nameserver, dns.TypeSOA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
 	var records []string
 	for _, answer := range ret.Answer {
-		record, isSOA := answer.(*dns.SOA)
-		if isSOA {
+		if record, isSOA := answer.(*dns.SOA); isSOA {
 			records = append(records, strings.TrimRight(record.Ns, "."))
 		}
 	}
@@ -49,22 +49,17 @@ func GetNS(domain string, nameserver string) ([]string, error) {
 	parseRecords := func(records []dns.RR) []string {
 		var result []string
 		for _, answer := range records {
-			nsRecord, isNS := answer.(*dns.NS)
-			if isNS {
-				result = append(result, nsRecord.Ns)
-			} else {
-				soaRecord, isSOA := answer.(*dns.SOA)
-				if isSOA {
-					result = append(result, soaRecord.Ns)
-				}
+			switch answer.(type) {
+			case *dns.NS:
+				result = append(result, answer.(*dns.NS).Ns)
+			case *dns.SOA:
+				result = append(result, answer.(*dns.SOA).Ns)
 			}
 		}
 		return result
 	}
 
-	msg := new(dns.Msg)
-	msg.SetQuestion(dns.Fqdn(domain), dns.TypeNS)
-	ret, err := dns.Exchange(msg, nameserver)
+	ret, err := dnsQuery(domain, nameserver, dns.TypeNS)
 	if err != nil {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
 	}
