@@ -93,13 +93,14 @@ func (c *Client) DomainIsSERVFAIL(domain string, nameserver string) bool {
 		return false
 	}
 
-	domainAuthorities, err := c.GetNS(domain, rootNameservers[0])
+	domainAuthorities, err := c.GetNS(domain, rootNameservers[0]+":53")
 	if err != nil {
 		log.Warn("%s: unable to get authority for %s: %v", domain, domain, err)
 		return false
 	}
 
 	for _, authority := range domainAuthorities {
+		authority += ":53"
 		msg := new(dns.Msg)
 		msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
 		ret, err := dns.Exchange(msg, authority)
