@@ -11,12 +11,23 @@ import (
 	"time"
 )
 
-type Client struct{}
+type Client struct {
+	cache *Cache
+}
 
 func (c *Client) query(domain string, nameserver string, reqType uint16) (*dns.Msg, error) {
+	cachedResp := c.cache.Get(nameserver, domain, reqType)
+	if cachedResp != nil {
+		return cachedResp, nil
+	}
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(domain), reqType)
-	return dns.Exchange(msg, nameserver)
+	resp, err := dns.Exchange(msg, nameserver)
+	if err != nil {
+		return nil, err
+	}
+	c.cache.Put(nameserver, domain, reqType, resp)
+	return resp, nil
 }
 
 func (c *Client) GetCNAME(domain string, nameserver string) ([]string, error) {
@@ -154,7 +165,9 @@ func (c *Client) DomainIsAvailable(domain, nameserver string) (bool, error) {
 }
 
 func NewClient() *Client {
-	return &Client{}
+	return &Client{
+		cache: NewCache(),
+	}
 }
 
 func ResolveDomain(domain string, nameserver string) []string {
