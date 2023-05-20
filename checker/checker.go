@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"github.com/mdeous/dnscheck/dns"
 	"github.com/mdeous/dnscheck/internal/log"
 	"sync"
 )
@@ -22,6 +23,7 @@ type Checker struct {
 	checkFuncs   []CheckFunc
 	findings     chan *DomainFinding
 	Domains      chan string
+	dns          *dns.Client
 }
 
 func (c *Checker) verbose(format string, values ...interface{}) {
@@ -75,6 +77,7 @@ func NewChecker(config *Config) *Checker {
 		fingerprints: LoadFingerprints(config.CustomFpFile),
 		Domains:      make(chan string),
 		findings:     make(chan *DomainFinding),
+		dns:          dns.NewClient(),
 	}
 	d.checkFuncs = []CheckFunc{
 		d.CheckCNAME,

@@ -11,14 +11,16 @@ import (
 	"time"
 )
 
-func dnsQuery(domain string, nameserver string, reqType uint16) (*dns.Msg, error) {
+type Client struct{}
+
+func (c *Client) query(domain string, nameserver string, reqType uint16) (*dns.Msg, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(domain), reqType)
 	return dns.Exchange(msg, nameserver)
 }
 
-func GetCNAME(domain string, nameserver string) ([]string, error) {
-	ret, err := dnsQuery(domain, nameserver, dns.TypeCNAME)
+func (c *Client) GetCNAME(domain string, nameserver string) ([]string, error) {
+	ret, err := c.query(domain, nameserver, dns.TypeCNAME)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -31,8 +33,8 @@ func GetCNAME(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
-func GetSOA(domain string, nameserver string) ([]string, error) {
-	ret, err := dnsQuery(domain, nameserver, dns.TypeSOA)
+func (c *Client) GetSOA(domain string, nameserver string) ([]string, error) {
+	ret, err := c.query(domain, nameserver, dns.TypeSOA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -45,7 +47,7 @@ func GetSOA(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
-func GetNS(domain string, nameserver string) ([]string, error) {
+func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 	parseRecords := func(records []dns.RR) []string {
 		var result []string
 		for _, answer := range records {
@@ -59,7 +61,7 @@ func GetNS(domain string, nameserver string) ([]string, error) {
 		return result
 	}
 
-	ret, err := dnsQuery(domain, nameserver, dns.TypeNS)
+	ret, err := c.query(domain, nameserver, dns.TypeNS)
 	if err != nil {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
 	}
@@ -75,23 +77,23 @@ func GetNS(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
-func DomainIsSERVFAIL(domain string, nameserver string) bool {
+func (c *Client) DomainIsSERVFAIL(domain string, nameserver string) bool {
 	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
 		log.Warn("%s: unable to determine root domain: %v", domain, err)
 		return false
 	}
 
-	rootNameservers, err := GetNS(rootDomain, nameserver)
+	rootNameservers, err := c.GetNS(rootDomain, nameserver)
 	if err != nil {
-		log.Warn("%s: unable to get authority for %s: %v", domain, rootDomain, err)
+		log.Warn("%s: unable to get nameserver: %v", domain, err)
 		return false
 	}
 	if len(rootNameservers) == 0 {
 		return false
 	}
 
-	domainAuthorities, err := GetNS(domain, rootNameservers[0])
+	domainAuthorities, err := c.GetNS(domain, rootNameservers[0])
 	if err != nil {
 		log.Warn("%s: unable to get authority for %s: %v", domain, domain, err)
 		return false
@@ -111,7 +113,7 @@ func DomainIsSERVFAIL(domain string, nameserver string) bool {
 	return false
 }
 
-func DomainIsNXDOMAIN(domain string, nameserver string) bool {
+func (c *Client) DomainIsNXDOMAIN(domain string, nameserver string) bool {
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
 	ret, err := dns.Exchange(msg, nameserver)
@@ -122,7 +124,7 @@ func DomainIsNXDOMAIN(domain string, nameserver string) bool {
 	return ret.Rcode == dns.RcodeNameError
 }
 
-func DomainIsAvailable(domain, nameserver string) (bool, error) {
+func (c *Client) DomainIsAvailable(domain, nameserver string) (bool, error) {
 	// extract root domain from CNAME target
 	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
@@ -137,7 +139,7 @@ func DomainIsAvailable(domain, nameserver string) (bool, error) {
 	}
 	if len(resolveResults) == 0 {
 		// domain does not resolve, does it have an SOA record?
-		soaRecords, err := GetSOA(rootDomain, nameserver)
+		soaRecords, err := c.GetSOA(rootDomain, nameserver)
 		if err != nil {
 			log.Warn("Error while querying SOA for %s: %v", rootDomain, err)
 			return false, err
@@ -148,6 +150,10 @@ func DomainIsAvailable(domain, nameserver string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func NewClient() *Client {
+	return &Client{}
 }
 
 func ResolveDomain(domain string, nameserver string) []string {

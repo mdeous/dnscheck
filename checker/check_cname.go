@@ -24,7 +24,7 @@ func (c *Checker) checkPattern(domain string, pattern string, body string) (bool
 func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, hasCname bool) (DetectionMethod, string, error) {
 	var err error
 	if fp.NXDomain {
-		if dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
+		if c.dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
 			if hasCname {
 				return MethodCnameNxdomain, body, nil
 			}
@@ -63,7 +63,7 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 // CheckCNAME checks if the CNAME entries for the provided domain are vulnerable
 func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	var err error
-	cnames, err := dns.GetCNAME(domain, c.cfg.Nameserver)
+	cnames, err := c.dns.GetCNAME(domain, c.cfg.Nameserver)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		if len(findings) == 0 {
 			// no fingerprint matched target domain, check if CNAME target can be registered
 			c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
-			available, err := dns.DomainIsAvailable(cname, c.cfg.Nameserver)
+			available, err := c.dns.DomainIsAvailable(cname, c.cfg.Nameserver)
 			if err != nil {
 				continue
 			}
