@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/fatih/color v1.15.0
-	github.com/miekg/dns v1.1.54
+	github.com/miekg/dns v1.1.55
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/net v0.10.0
 )
