@@ -108,4 +108,5 @@ func init() {
 	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
 	checkCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")
 	checkCmd.Flags().BoolP("edge-cases", "e", false, "include edge-case fingerprints (might cause false positives)")
+	checkCmd.Flags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 }
