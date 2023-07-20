@@ -75,6 +75,7 @@ Usage:
 Flags:
   -d, --domain string         single domain to check
   -D, --domains-file string   file containing domains to check (default "domains.txt")
+  -e, --edge-cases            include edge-case fingerprints (might cause false positives)
   -h, --help                  help for check
   -n, --nameserver string     server and port to use for name resolution (default "8.8.8.8:53")
   -o, --output string         file to write findings to
