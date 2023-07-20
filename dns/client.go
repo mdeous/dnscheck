@@ -12,7 +12,7 @@ type Client struct {
 	cache *Cache
 }
 
-func (c *Client) query(domain string, nameserver string, reqType uint16) (*dns.Msg, error) {
+func (c *Client) query(nameserver string, domain string, reqType uint16) (*dns.Msg, error) {
 	cachedResp := c.cache.Get(nameserver, domain, reqType)
 	if cachedResp != nil {
 		return cachedResp, nil
@@ -28,7 +28,7 @@ func (c *Client) query(domain string, nameserver string, reqType uint16) (*dns.M
 }
 
 func (c *Client) GetCNAME(domain string, nameserver string) ([]string, error) {
-	ret, err := c.query(domain, nameserver, dns.TypeCNAME)
+	ret, err := c.query(nameserver, domain, dns.TypeCNAME)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -42,7 +42,7 @@ func (c *Client) GetCNAME(domain string, nameserver string) ([]string, error) {
 }
 
 func (c *Client) GetSOA(domain string, nameserver string) ([]string, error) {
-	ret, err := c.query(domain, nameserver, dns.TypeSOA)
+	ret, err := c.query(nameserver, domain, dns.TypeSOA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -69,7 +69,7 @@ func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 		return result
 	}
 
-	ret, err := c.query(domain, nameserver, dns.TypeNS)
+	ret, err := c.query(nameserver, domain, dns.TypeNS)
 	if err != nil {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
 	}
@@ -123,9 +123,7 @@ func (c *Client) DomainIsSERVFAIL(domain string, nameserver string) bool {
 }
 
 func (c *Client) DomainIsNXDOMAIN(domain string, nameserver string) bool {
-	msg := new(dns.Msg)
-	msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
-	ret, err := dns.Exchange(msg, nameserver)
+	ret, err := c.query(nameserver, domain, dns.TypeA)
 	if err != nil {
 		log.Warn("%s: type A request to check NXDOMAIN failed: %v", domain, err)
 		return false
