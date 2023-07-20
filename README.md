@@ -76,6 +76,7 @@ Flags:
   -d, --domain string         single domain to check
   -D, --domains-file string   file containing domains to check (default "domains.txt")
   -e, --edge-cases            include edge-case fingerprints (might cause false positives)
+  -f, --fingerprints string   custom service fingerprints file
   -h, --help                  help for check
   -n, --nameserver string     server and port to use for name resolution (default "8.8.8.8:53")
   -o, --output string         file to write findings to
@@ -83,8 +84,7 @@ Flags:
   -w, --workers int           amount of concurrent workers (default 10)
 
 Global Flags:
-  -f, --fingerprints string   custom service fingerprints file
-  -v, --verbose               increase application verbosity
+  -v, --verbose   increase application verbosity
 ```
 
 Example output:
