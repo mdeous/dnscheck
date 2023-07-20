@@ -9,11 +9,12 @@ import (
 type CheckFunc func(string) ([]*Match, error)
 
 type Config struct {
-	Nameserver   string
-	Verbose      bool
-	Workers      int
-	CustomFpFile string
-	HttpTimeout  uint
+	Nameserver     string
+	Verbose        bool
+	Workers        int
+	CustomFpFile   string
+	HttpTimeout    uint
+	CheckEdgeCases bool
 }
 
 type Checker struct {
@@ -74,7 +75,7 @@ func (c *Checker) Findings() <-chan *DomainFinding {
 func NewChecker(config *Config) *Checker {
 	d := &Checker{
 		cfg:          config,
-		fingerprints: LoadFingerprints(config.CustomFpFile),
+		fingerprints: LoadFingerprints(config.CustomFpFile, config.CheckEdgeCases),
 		Domains:      make(chan string),
 		findings:     make(chan *DomainFinding),
 		dns:          dns.NewClient(),

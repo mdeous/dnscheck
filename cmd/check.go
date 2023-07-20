@@ -45,14 +45,19 @@ var checkCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		edgeCases, err := cmd.Flags().GetBool("edge-cases")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// instanciate domain checker
 		chk := checker.NewChecker(&checker.Config{
-			Nameserver:   nameserver,
-			Verbose:      verbose,
-			Workers:      workers,
-			CustomFpFile: fpFile,
-			HttpTimeout:  timeout,
+			Nameserver:     nameserver,
+			Verbose:        verbose,
+			Workers:        workers,
+			CustomFpFile:   fpFile,
+			HttpTimeout:    timeout,
+			CheckEdgeCases: edgeCases,
 		})
 
 		// load target domain(s)
@@ -102,4 +107,5 @@ func init() {
 	checkCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	checkCmd.Flags().StringP("output", "o", "", "file to write findings to")
 	checkCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")
+	checkCmd.Flags().BoolP("edge-cases", "e", false, "include edge-case fingerprints (might cause false positives)")
 }

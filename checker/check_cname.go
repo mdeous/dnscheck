@@ -31,7 +31,7 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 			return MethodNxdomain, body, nil
 		}
 
-	} else if fp.HttpStatus != 0 {
+	} else if fp.HasHttpStatus() {
 		statusCode, err := utils.HttpGetStatus(domain, c.cfg.HttpTimeout)
 		if err != nil {
 			return MethodNone, body, fmt.Errorf("error while checking HTTP status code for %s: %v", domain, err)
@@ -44,7 +44,7 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 			}
 		}
 
-	} else if len(fp.Pattern) > 0 {
+	} else if fp.HasPattern() {
 		var patternMatches bool
 		patternMatches, body, err = c.checkPattern(domain, fp.Pattern, body)
 		if err != nil {
@@ -120,7 +120,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	if len(findings) == 0 && len(resolveResults) > 0 {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
-			if fp.Vulnerable && len(fp.CNames) == 0 {
+			if !fp.HasCNames() {
 				detectionMethod, body, err = c.checkFingerprint(domain, fp, body, false)
 				if err != nil {
 					continue
