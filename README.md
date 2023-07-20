@@ -89,7 +89,7 @@ Global Flags:
 Example output:
 
 ```
-❯ ./dnscheck check -v -D target_domains.txt
+❯ ./dnscheck check -D target_domains.txt
 2023/05/13 16:57:45 - INFO - Multi domains mode (domains.txt)
 2023/05/13 16:57:45 - INFO - Checking vuln-createsend.something.io
 2023/05/13 16:57:45 - INFO - Checking vuln-s3.something.io
