@@ -2,9 +2,20 @@ name: Build
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/build.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
 
 jobs:
 
@@ -27,5 +38,5 @@ jobs:
         with:
           go-version: ^1.16
 
-      - name: Check if code compiles
+      - name: Compile code
         run: make
