@@ -11,6 +11,7 @@ var (
 	RedBold = color.New(color.FgRed).Add(color.Bold).SprintfFunc()
 	Green   = color.New(color.FgGreen).SprintfFunc()
 	Blue    = color.New(color.FgBlue).SprintfFunc()
+	Magenta = color.New(color.FgMagenta).SprintfFunc()
 )
 
 func Debug(format string, values ...interface{}) {
@@ -25,7 +26,7 @@ func Info(format string, values ...interface{}) {
 
 func Warn(format string, values ...interface{}) {
 	msg := fmt.Sprintf(format, values...)
-	logging.Println("- WARNING - " + Red(msg))
+	logging.Println("- WARNING - " + Magenta(msg))
 }
 
 func Fatal(format string, values ...interface{}) {
