@@ -72,6 +72,11 @@ var checkCmd = &cobra.Command{
 			go utils.ReadLines(domainFile, chk.Domains)
 		}
 
+		// display status for edge-case rules
+		if edgeCases {
+			log.Info("Edge-case rules enabled")
+		}
+
 		// scan domains and read results
 		var findings []*checker.DomainFinding
 		chk.Scan()
