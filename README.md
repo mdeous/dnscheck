@@ -66,31 +66,37 @@ behavior, please refer to the other arguments as described below.
 Help:
 
 ```
-❯ dnscheck check -h
-Search for possible subdomain takeovers
+❯ ./dnscheck -h
+Subdomain takeover assessment tool
 
 Usage:
-  dnscheck check [flags]
+  dnscheck [flags]
+  dnscheck [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  version     Show program version
 
 Flags:
   -d, --domain string         single domain to check
   -D, --domains-file string   file containing domains to check (default "domains.txt")
   -e, --edge-cases            include edge-case fingerprints (might cause false positives)
   -f, --fingerprints string   custom service fingerprints file
-  -h, --help                  help for check
+  -h, --help                  help for dnscheck
   -n, --nameserver string     server and port to use for name resolution (default "8.8.8.8:53")
   -o, --output string         file to write findings to
   -t, --timeout uint          timeout for HTTP requests (default 10)
+  -v, --verbose               increase application verbosity
   -w, --workers int           amount of concurrent workers (default 10)
 
-Global Flags:
-  -v, --verbose   increase application verbosity
+Use "dnscheck [command] --help" for more information about a command.
 ```
 
 Example output:
 
 ```
-❯ ./dnscheck check -D target_domains.txt
+❯ ./dnscheck -D target_domains.txt
 2023/05/13 16:57:45 - INFO - Multi domains mode (domains.txt)
 2023/05/13 16:57:45 - INFO - Checking vuln-createsend.something.io
 2023/05/13 16:57:45 - INFO - Checking vuln-s3.something.io
@@ -103,10 +109,6 @@ Example output:
 2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: AWS/S3] vuln-s3.something.io -> skhjfgbidkfgbisdkfghb.s3.amazonaws.com [type=dangling_cname_record method=cname_body_pattern]
 2023/05/13 16:57:46 - VULNERABLE DOMAIN - [service: Campaign Monitor] vuln-createsend.something.io -> 13.52.43.40,54.183.0.47 [type=dangling_cname_record method=body_pattern]
 ```
-
-### Monitoring domains
-
-TODO  (not implemented yet)
 
 ## Alternatives
 
