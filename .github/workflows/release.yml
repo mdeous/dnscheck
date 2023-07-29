@@ -2,8 +2,16 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/release.yml'
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
 
@@ -15,7 +23,8 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
           submodules: true
@@ -31,10 +40,24 @@ jobs:
       - name: Build
         run: make cross-compile
 
-      - name: Create release
-        uses: ncipollo/release-action@v1
+      - name: Get release version
+        id: get_version
+        run: |
+          version=""
+          if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
+            version="nightly"
+          else
+            version="$(make version)"
+          fi
+          echo "Version: ${version}"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+
+      - name: Publish release
+        uses: marvinpinto/action-automatic-releases@v1.2.1
         with:
-          artifacts: "build/dnscheck-*"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          omitBody:  true
+          automatic_release_tag: ${{ steps.get_version.outputs.version }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ github.ref == 'refs/heads/main' }}
+          title: ${{ steps.get_version.outputs.version }}
+          files: |
+            build/dnscheck-*
