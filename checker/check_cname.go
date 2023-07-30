@@ -85,6 +85,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					}
 					if detectionMethod != MethodNone {
 						finding := &Match{
+							Domain:      domain,
 							Target:      cname,
 							Type:        IssueDandlingCname,
 							Method:      detectionMethod,
@@ -105,6 +106,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 			}
 			if available {
 				finding := &Match{
+					Domain:      domain,
 					Target:      cname,
 					Type:        IssueUnregistered,
 					Method:      MethodSoaCheck,
@@ -127,6 +129,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 				}
 				if detectionMethod != MethodNone {
 					finding := &Match{
+						Domain:      domain,
 						Target:      strings.Join(resolveResults, ","),
 						Type:        IssueDandlingCname,
 						Method:      detectionMethod,

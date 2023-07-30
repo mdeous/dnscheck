@@ -29,10 +29,21 @@ const (
 )
 
 type Match struct {
+	Domain      string          `json:"domain"`
 	Target      string          `json:"target"`
 	Type        IssueType       `json:"type"`
 	Method      DetectionMethod `json:"method"`
 	Fingerprint *Fingerprint    `json:"fingerprint"`
+}
+
+func (m *Match) String() string {
+	fpName := "n/a"
+	fpConfidence := ConfidenceUnknown
+	if m.Fingerprint != nil {
+		fpName = m.Fingerprint.Name
+		fpConfidence = m.Fingerprint.Confidence()
+	}
+	return fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)", fpName, m.Domain, m.Target, m.Type, m.Method, fpConfidence)
 }
 
 type DomainFinding struct {

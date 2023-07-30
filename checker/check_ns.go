@@ -5,6 +5,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 	var findings []*Match
 	if c.dns.DomainIsSERVFAIL(domain, c.cfg.Nameserver) {
 		finding := &Match{
+			Domain:      domain,
 			Target:      "n/a",
 			Type:        IssueDanglingNs,
 			Method:      MethodServfail,
