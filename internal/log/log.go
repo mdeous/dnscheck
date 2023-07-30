@@ -8,7 +8,6 @@ import (
 
 var (
 	Red     = color.New(color.FgRed).SprintfFunc()
-	RedBold = color.New(color.FgRed).Add(color.Bold).SprintfFunc()
 	Green   = color.New(color.FgGreen).SprintfFunc()
 	Blue    = color.New(color.FgBlue).SprintfFunc()
 	Magenta = color.New(color.FgMagenta).SprintfFunc()
@@ -36,5 +35,5 @@ func Fatal(format string, values ...interface{}) {
 
 func Finding(format string, values ...interface{}) {
 	msg := fmt.Sprintf(format, values...)
-	logging.Println("- VULNERABLE DOMAIN - " + RedBold(msg))
+	logging.Println("- VULNERABLE DOMAIN - " + Red(msg))
 }
