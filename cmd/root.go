@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/mdeous/dnscheck/checker"
 	"github.com/mdeous/dnscheck/internal/log"
 	"github.com/mdeous/dnscheck/internal/utils"
@@ -49,6 +50,10 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		skipSummary, err := cmd.Flags().GetBool("skip-summary")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 
 		// instanciate domain checker
 		chk := checker.NewChecker(&checker.Config{
@@ -79,6 +84,8 @@ var rootCmd = &cobra.Command{
 
 		// scan domains and read results
 		var findings []*checker.DomainFinding
+		fCount := 0
+		mCount := 0
 		chk.Scan()
 		for f := range chk.Findings() {
 			for _, match := range f.Matches {
@@ -88,8 +95,29 @@ var rootCmd = &cobra.Command{
 				}
 				log.Finding("[service: %s] %s -> %s [type=%s method=%s]", fpName, f.Domain, match.Target, match.Type, match.Method)
 			}
-			if len(f.Matches) > 0 && output != "" {
+			if len(f.Matches) > 0 {
 				findings = append(findings, f)
+				fCount++
+				mCount += len(f.Matches)
+			}
+		}
+		log.Info("Scan complete")
+
+		// display results summary
+		if !skipSummary {
+			summary := fmt.Sprintf("Vulnerable domains: %d", fCount)
+			if mCount > 0 {
+				summary += fmt.Sprintf(" (%d service matches)", mCount)
+			}
+			log.Info(summary)
+			for _, f := range findings {
+				for _, match := range f.Matches {
+					fpName := "n/a"
+					if match.Fingerprint != nil {
+						fpName = match.Fingerprint.Name
+					}
+					log.Finding("[service: %s] %s -> %s [type=%s method=%s]", fpName, f.Domain, match.Target, match.Type, match.Method)
+				}
 			}
 		}
 
@@ -99,6 +127,8 @@ var rootCmd = &cobra.Command{
 			err := data.Write(output)
 			if err != nil {
 				log.Fatal("Unable to write results: %v", err)
+			} else {
+				log.Info("Results written to %s", output)
 			}
 		}
 	},
@@ -120,4 +150,5 @@ func init() {
 	rootCmd.Flags().BoolP("edge-cases", "e", false, "include edge-case fingerprints (might cause false positives)")
 	rootCmd.Flags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 	rootCmd.Flags().BoolP("verbose", "v", false, "increase application verbosity")
+	rootCmd.Flags().BoolP("skip-summary", "s", false, "skip summary at the end of the scan")
 }
