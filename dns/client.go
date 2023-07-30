@@ -55,6 +55,20 @@ func (c *Client) GetSOA(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
+func (c *Client) GetA(domain string, nameserver string) ([]string, error) {
+	ret, err := c.query(nameserver, domain, dns.TypeA)
+	if err != nil {
+		return nil, fmt.Errorf("could not get A for %s: %v", domain, err)
+	}
+	var records []string
+	for _, answer := range ret.Answer {
+		if record, isA := answer.(*dns.A); isA {
+			records = append(records, record.A.String())
+		}
+	}
+	return records, nil
+}
+
 func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 	parseRecords := func(records []dns.RR) []string {
 		var result []string

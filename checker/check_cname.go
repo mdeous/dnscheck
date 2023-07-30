@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/mdeous/dnscheck/dns"
 	"github.com/mdeous/dnscheck/internal/utils"
+	"net"
 	"strings"
 )
 
@@ -21,12 +22,15 @@ func (c *Checker) checkPattern(domain string, pattern string, body string) (bool
 	return strings.Contains(body, pattern), body, nil
 }
 
-func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, hasCname bool) (DetectionMethod, string, error) {
+func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, hasCname bool, hasA bool) (DetectionMethod, string, error) {
 	var err error
 	if fp.NXDomain {
 		if c.dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
 			if hasCname {
 				return MethodCnameNxdomain, body, nil
+			}
+			if hasA {
+				return MethodANxdomain, body, nil
 			}
 			return MethodNxdomain, body, nil
 		}
@@ -39,6 +43,9 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 			if statusCode == fp.HttpStatus {
 				if hasCname {
 					return MethodCnameHttpStatus, body, nil
+				}
+				if hasA {
+					return MethodAHttpStatus, body, nil
 				}
 				return MethodHttpStatus, body, nil
 			}
@@ -53,6 +60,9 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 		if patternMatches {
 			if hasCname {
 				return MethodCnamePattern, body, nil
+			}
+			if hasA {
+				return MethodAPattern, body, nil
 			}
 			return MethodPattern, body, nil
 		}
@@ -69,17 +79,49 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	}
 	var findings []*Match
 	var detectionMethod DetectionMethod
+	body := ""
+
+	// handle cases where fingerprint target is an IP address
+	aRecords, err := c.dns.GetA(domain, c.cfg.Nameserver)
+	if err == nil {
+		for _, a := range aRecords {
+			// check if any fingerprint matches
+			for _, fp := range c.fingerprints {
+				for _, serviceCname := range fp.CNames {
+					// check if CNAME is an IP address
+					if net.ParseIP(serviceCname) != nil {
+						if a == serviceCname {
+							c.verbose("%s: A record %s matches known service: %s", domain, a, fp.Name)
+							detectionMethod, body, err = c.checkFingerprint(domain, fp, "", false, true)
+							if err != nil {
+								continue
+							}
+							if detectionMethod != MethodNone {
+								finding := &Match{
+									Domain:      domain,
+									Target:      a,
+									Type:        IssueDandlingCname,
+									Method:      detectionMethod,
+									Fingerprint: fp,
+								}
+								findings = append(findings, finding)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// target has CNAME records
-	body := ""
 	for _, cname := range cnames {
 		c.verbose("%s: Found CNAME record: %s", domain, cname)
 		// check if any fingerprint matches
 		for _, fp := range c.fingerprints {
 			for _, serviceCname := range fp.CNames {
 				if strings.HasSuffix(cname, serviceCname) {
-					c.verbose("%s: CNAME %s matches known service: %s", domain, cname, fp.Name)
-					detectionMethod, body, err = c.checkFingerprint(domain, fp, body, true)
+					c.verbose("%s: CNAME record %s matches known service: %s", domain, cname, fp.Name)
+					detectionMethod, body, err = c.checkFingerprint(domain, fp, body, true, false)
 					if err != nil {
 						continue
 					}
@@ -123,7 +165,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
 			if !fp.HasCNames() {
-				detectionMethod, body, err = c.checkFingerprint(domain, fp, body, false)
+				detectionMethod, body, err = c.checkFingerprint(domain, fp, body, false, false)
 				if err != nil {
 					continue
 				}

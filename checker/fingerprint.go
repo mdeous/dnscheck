@@ -17,7 +17,7 @@ var WeakFingerprints = []string{"404 not found"}
 type ConfidenceLevel string
 
 const (
-	ConfidenceUnknown ConfidenceLevel = "n/a"
+	ConfidenceUnknown ConfidenceLevel = "unknown"
 	ConfidenceLow                     = "low"
 	ConfidenceMedium                  = "medium"
 	ConfidenceHigh                    = "high"

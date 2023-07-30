@@ -26,6 +26,9 @@ const (
 	MethodServfail                        = "servfail"
 	MethodSoaCheck                        = "soa_check"
 	MethodNone                            = "not_vulnerable"
+	MethodAPattern                        = "a_body_pattern"
+	MethodANxdomain                       = "a_nxdomain"
+	MethodAHttpStatus                     = "a_http_status"
 )
 
 type Match struct {
