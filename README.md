@@ -85,7 +85,7 @@ Flags:
   -f, --fingerprints string   custom service fingerprints file
   -h, --help                  help for dnscheck
   -o, --output string         file to write findings to
-  -s, --skip-summary          skip summary at the end of the scan
+  -s, --summary               show summary at the end of the scan
   -t, --timeout uint          timeout for HTTP requests (default 10)
   -v, --verbose               increase application verbosity
   -w, --workers int           amount of concurrent workers (default 10)
@@ -96,18 +96,22 @@ Use "dnscheck [command] --help" for more information about a command.
 Example output:
 
 ```
-❯ ./dnscheck -D target_domains.txt
-2023/05/13 16:57:45 - INFO - Multi domains mode (domains.txt)
-2023/05/13 16:57:45 - INFO - Checking vuln-createsend.something.io
-2023/05/13 16:57:45 - INFO - Checking vuln-s3.something.io
-2023/05/13 16:57:45 - INFO - Checking vuln-beanstalk.something.io
-2023/05/13 16:57:45 - INFO - Checking vuln-unregistered.something.io
-2023/05/13 16:57:45 - INFO - Checking vuln-airee.something.io
-2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: n/a] vuln-unregistered.something.io -> fhjxbgisfubvgbgfusf.io [type=unregistered_domain method=soa_check]
-2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: AWS/Elastic Beanstalk] vuln-beanstalk.something.io -> dkfjbgdf.us-east-1.elasticbeanstalk.com [type=dangling_cname_record method=cname_nxdomain]
-2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: Airee.ru] vuln-airee.something.io -> something-unregistered.airee.ru [type=dangling_cname_record method=cname_body_pattern]
-2023/05/13 16:57:45 - VULNERABLE DOMAIN - [service: AWS/S3] vuln-s3.something.io -> skhjfgbidkfgbisdkfghb.s3.amazonaws.com [type=dangling_cname_record method=cname_body_pattern]
-2023/05/13 16:57:46 - VULNERABLE DOMAIN - [service: Campaign Monitor] vuln-createsend.something.io -> 13.52.43.40,54.183.0.47 [type=dangling_cname_record method=body_pattern]
+❯ ./dnscheck -D domains.txt -e
+2023/07/31 22:43:01 - INFO - Multi domains mode (domains.txt)
+2023/07/31 22:43:01 - INFO - Edge-case rules enabled
+2023/07/31 22:43:01 - INFO - Checking vuln-beanstalk.something.io
+2023/07/31 22:43:01 - INFO - Checking vuln-airee.something.io
+2023/07/31 22:43:01 - INFO - Checking vuln-s3.something.io
+2023/07/31 22:43:01 - INFO - Checking vuln-unregistered.something.io
+2023/07/31 22:43:01 - INFO - Checking vuln-smartjobboard.something.io
+2023/07/31 22:43:01 - INFO - Checking vuln-createsend.something.io
+2023/07/31 22:43:01 - VULNERABLE DOMAIN - [service: AWS/Elastic Beanstalk] vuln-beanstalk.something.io -> dkfjbgdf.us-east-1.elasticbeanstalk.com [type=dangling_cname_record method=cname_nxdomain] (confidence: high)
+2023/07/31 22:43:01 - VULNERABLE DOMAIN - [service: SmartJobBoard] vuln-smartjobboard.something.io -> 52.16.160.97 [type=dangling_cname_record method=a_body_pattern] (confidence: high)
+2023/07/31 22:43:01 - VULNERABLE DOMAIN - [service: n/a] vuln-unregistered.something.io -> fhjxbgisfubvgbgfusf.io [type=unregistered_domain method=soa_check] (confidence: unknown)
+2023/07/31 22:43:02 - VULNERABLE DOMAIN - [service: Campaign Monitor] vuln-createsend.something.io -> 13.52.43.40,54.183.0.47,13.52.43.40,54.183.0.47,54.183.0.47,13.52.43.40 [type=dangling_cname_record method=body_pattern] (confidence: medium)
+2023/07/31 22:43:02 - VULNERABLE DOMAIN - [service: Airee.ru] vuln-airee.something.io -> mdeous.airee.ru [type=dangling_cname_record method=cname_body_pattern] (confidence: high)
+2023/07/31 22:43:04 - VULNERABLE DOMAIN - [service: AWS/S3] vuln-s3.something.io -> skhjfgbidkfgbisdkfghb.s3.amazonaws.com [type=dangling_cname_record method=cname_body_pattern] (confidence: high)
+2023/07/31 22:43:04 - INFO - Scan complete
 ```
 
 ## Alternatives
