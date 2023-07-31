@@ -46,7 +46,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		skipSummary, err := cmd.Flags().GetBool("skip-summary")
+		showSummary, err := cmd.Flags().GetBool("summary")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -95,7 +95,7 @@ var rootCmd = &cobra.Command{
 		log.Info("Scan complete")
 
 		// display results summary
-		if !skipSummary && singleDomain == "" {
+		if showSummary {
 			summary := fmt.Sprintf("Vulnerable domains: %d", fCount)
 			if mCount > 0 {
 				summary += fmt.Sprintf(" (%d service matches)", mCount)
@@ -136,5 +136,5 @@ func init() {
 	rootCmd.Flags().BoolP("edge-cases", "e", false, "include edge-case fingerprints (might cause false positives)")
 	rootCmd.Flags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 	rootCmd.Flags().BoolP("verbose", "v", false, "increase application verbosity")
-	rootCmd.Flags().BoolP("skip-summary", "s", false, "skip summary at the end of the scan")
+	rootCmd.Flags().BoolP("summary", "s", false, "show summary at the end of the scan")
 }
