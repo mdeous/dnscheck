@@ -2,7 +2,6 @@ package checker
 
 import (
 	"fmt"
-	"github.com/mdeous/dnscheck/dns"
 	"github.com/mdeous/dnscheck/internal/utils"
 	"net"
 	"strings"
@@ -160,7 +159,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	}
 
 	// target has no CNAME records, check fingerprints that don't expect one
-	resolveResults := dns.ResolveDomain(domain, c.cfg.Nameserver)
+	resolveResults := c.dns.Resolve(domain, c.cfg.Nameserver)
 	if len(findings) == 0 && len(resolveResults) > 0 {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {
