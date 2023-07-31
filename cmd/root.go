@@ -95,7 +95,7 @@ var rootCmd = &cobra.Command{
 		log.Info("Scan complete")
 
 		// display results summary
-		if !skipSummary {
+		if !skipSummary && singleDomain == "" {
 			summary := fmt.Sprintf("Vulnerable domains: %d", fCount)
 			if mCount > 0 {
 				summary += fmt.Sprintf(" (%d service matches)", mCount)
