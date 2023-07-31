@@ -24,7 +24,7 @@ func (c *Checker) checkPattern(domain string, pattern string, body string) (bool
 func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, hasCname bool, hasA bool) (DetectionMethod, string, error) {
 	var err error
 	if fp.NXDomain {
-		if c.dns.DomainIsNXDOMAIN(domain, c.cfg.Nameserver) {
+		if c.dns.DomainIsNXDOMAIN(domain) {
 			if hasCname {
 				return MethodCnameNxdomain, body, nil
 			}
@@ -72,7 +72,7 @@ func (c *Checker) checkFingerprint(domain string, fp *Fingerprint, body string, 
 // CheckCNAME checks if the CNAME entries for the provided domain are vulnerable
 func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	var err error
-	cnames, err := c.dns.GetCNAME(domain, c.cfg.Nameserver)
+	cnames, err := c.dns.GetCNAME(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	body := ""
 
 	// handle cases where fingerprint target is an IP address
-	aRecords, err := c.dns.GetA(domain, c.cfg.Nameserver)
+	aRecords, err := c.dns.GetA(domain)
 	if err == nil {
 		for _, a := range aRecords {
 			// check if any fingerprint matches
@@ -141,7 +141,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 		if len(findings) == 0 {
 			// no fingerprint matched target domain, check if CNAME target can be registered
 			c.verbose("%s: Checking CNAME target availability: %s", domain, cname)
-			available, err := c.dns.DomainIsAvailable(cname, c.cfg.Nameserver)
+			available, err := c.dns.DomainIsAvailable(cname)
 			if err != nil {
 				continue
 			}
@@ -159,7 +159,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	}
 
 	// target has no CNAME records, check fingerprints that don't expect one
-	resolveResults := c.dns.Resolve(domain, c.cfg.Nameserver)
+	resolveResults := c.dns.Resolve(domain)
 	if len(findings) == 0 && len(resolveResults) > 0 {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {

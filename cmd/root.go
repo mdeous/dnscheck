@@ -30,10 +30,6 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		nameserver, err := cmd.Flags().GetString("nameserver")
-		if err != nil {
-			log.Fatal(err.Error())
-		}
 		workers, err := cmd.Flags().GetInt("workers")
 		if err != nil {
 			log.Fatal(err.Error())
@@ -57,7 +53,6 @@ var rootCmd = &cobra.Command{
 
 		// instanciate domain checker
 		chk := checker.NewChecker(&checker.Config{
-			Nameserver:     nameserver,
 			Verbose:        verbose,
 			Workers:        workers,
 			CustomFpFile:   fpFile,
@@ -135,7 +130,6 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringP("domain", "d", "", "single domain to check")
 	rootCmd.Flags().StringP("domains-file", "D", "domains.txt", "file containing domains to check")
-	rootCmd.Flags().StringP("nameserver", "n", "8.8.8.8:53", "server and port to use for name resolution")
 	rootCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	rootCmd.Flags().StringP("output", "o", "", "file to write findings to")
 	rootCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")

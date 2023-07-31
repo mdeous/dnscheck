@@ -9,7 +9,6 @@ import (
 type CheckFunc func(string) ([]*Match, error)
 
 type Config struct {
-	Nameserver     string
 	Verbose        bool
 	Workers        int
 	CustomFpFile   string

@@ -84,8 +84,8 @@ Flags:
   -e, --edge-cases            include edge-case fingerprints (might cause false positives)
   -f, --fingerprints string   custom service fingerprints file
   -h, --help                  help for dnscheck
-  -n, --nameserver string     server and port to use for name resolution (default "8.8.8.8:53")
   -o, --output string         file to write findings to
+  -s, --skip-summary          skip summary at the end of the scan
   -t, --timeout uint          timeout for HTTP requests (default 10)
   -v, --verbose               increase application verbosity
   -w, --workers int           amount of concurrent workers (default 10)
