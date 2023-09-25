@@ -1,4 +1,4 @@
 [submodule "checker/can-i-take-over-xyz"]
 	path = checker/can-i-take-over-xyz
-	url = https://github.com/mdeous/can-i-take-over-xyz
-	branch = regen-sigs
+	url = https://github.com/EdOverflow/can-i-take-over-xyz
+	branch = master
