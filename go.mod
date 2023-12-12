@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/fatih/color v1.15.0
 	github.com/miekg/dns v1.1.56
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/net v0.19.0
 )
