@@ -7,7 +7,7 @@ require (
 	github.com/miekg/dns v1.1.62
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
-	golang.org/x/net v0.34.0
+	golang.org/x/net v0.38.0
 )
 
 require (
@@ -17,6 +17,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 )
