@@ -8,7 +8,7 @@
 
 - CNAME records pointing to an unclaimed resource (e.g. S3 bucket, GitHub pages, Azure CloudApp, etc.)
 - CNAME records pointing to an unregistered domain
-- Zone delegations poiting to an unclaimed zone
+- Zone delegations pointing to an unclaimed zone
 
 Detection of CNAMEs pointing to unclaimed resources is based on the information available
 in [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz).
