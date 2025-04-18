@@ -23,6 +23,18 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		return nil, err
 	}
 
+	// scoring system for dangling NS detection
+	type nsStatus struct {
+		name             string
+		unregistered     bool
+		soaFailed        bool
+		aFailed          bool
+		aaaaFailed       bool
+		danglingScore    int
+		responseReceived bool
+	}
+
+	var nsStatuses []nsStatus
 	allDangling := true
 	partialDangling := false
 	var failedNS []string
@@ -30,15 +42,24 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 
 	// check if the nameservers themselves are registered
 	for _, authority := range domainAuthorities {
+		status := nsStatus{
+			name:          authority,
+			danglingScore: 0,
+		}
+
 		// check if the NS hostname itself resolves
 		nsResolutions := c.dns.Resolve(authority)
 		if len(nsResolutions) == 0 {
 			// NS hostname doesn't resolve, check if it's NXDOMAIN
 			if c.dns.DomainIsNXDOMAIN(authority) {
 				c.verbose("%s: nameserver %s is NXDOMAIN", domain, authority)
+				status.unregistered = true
+				status.danglingScore += 3 // highest score for unregistered NS
 				unregisteredNS = append(unregisteredNS, authority)
 			}
 		}
+
+		nsStatuses = append(nsStatuses, status)
 	}
 
 	// if we found unregistered nameservers, report them
@@ -49,12 +70,13 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Type:        IssueUnregisteredNs,
 			Method:      MethodNxdomain,
 			Fingerprint: nil,
+			Confidence:  ConfidenceHigh, // unregistered NS is a high confidence finding
 		}
 		findings = append(findings, finding)
 	}
 
 	// check if nameservers respond to queries
-	for _, authority := range domainAuthorities {
+	for i, authority := range domainAuthorities {
 		authorityAddr := authority
 		if !strings.Contains(authority, ":") {
 			authorityAddr += ":53"
@@ -68,11 +90,19 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		if errSOA == nil && soaResp != nil && soaResp.Rcode == dns.RcodeSuccess && len(soaResp.Answer) > 0 {
 			// if we get a valid SOA response, the NS is definitely not dangling
 			isDangling = false
+			nsStatuses[i].responseReceived = true
 		} else {
+			nsStatuses[i].soaFailed = true
+			nsStatuses[i].danglingScore += 2 // SOA failure is a strong indicator
+			
 			// query A record
 			aResp, errA := c.dns.Query(authorityAddr, domain, dns.TypeA)
 			if errA == nil && aResp != nil && aResp.Rcode == dns.RcodeSuccess && len(aResp.Answer) > 0 {
 				isDangling = false
+				nsStatuses[i].responseReceived = true
+			} else {
+				nsStatuses[i].aFailed = true
+				nsStatuses[i].danglingScore += 1
 			}
 
 			// query AAAA record if still dangling
@@ -80,6 +110,10 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				aaaaResp, errAAAA := c.dns.Query(authorityAddr, domain, dns.TypeAAAA)
 				if errAAAA == nil && aaaaResp != nil && aaaaResp.Rcode == dns.RcodeSuccess && len(aaaaResp.Answer) > 0 {
 					isDangling = false
+					nsStatuses[i].responseReceived = true
+				} else {
+					nsStatuses[i].aaaaFailed = true
+					nsStatuses[i].danglingScore += 1
 				}
 			}
 		}
@@ -93,22 +127,52 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		partialDangling = true
 	}
 
-	if allDangling {
+	// analyze results using the scoring system
+	var highRiskNS []string
+	var mediumRiskNS []string
+
+	for _, status := range nsStatuses {
+		if status.danglingScore >= 3 {
+			// high risk: unregistered NS or multiple failures
+			highRiskNS = append(highRiskNS, status.name)
+		} else if status.danglingScore > 0 {
+			// medium risk: some failures but not conclusive
+			mediumRiskNS = append(mediumRiskNS, status.name)
+		}
+	}
+
+	// report findings based on risk levels
+	if len(highRiskNS) == len(domainAuthorities) {
+		// all NS are high risk - definite dangling NS
 		finding := &Match{
 			Domain:      domain,
-			Target:      strings.Join(domainAuthorities, ","),
+			Target:      strings.Join(highRiskNS, ","),
 			Type:        IssueDanglingNs,
 			Method:      MethodServfail,
 			Fingerprint: nil,
+			Confidence:  ConfidenceHigh,
 		}
 		findings = append(findings, finding)
-	} else if partialDangling && len(failedNS) > 0 {
+	} else if len(highRiskNS) > 0 {
+		// some NS are high risk - partial dangling NS
 		finding := &Match{
 			Domain:      domain,
-			Target:      strings.Join(failedNS, ","),
+			Target:      strings.Join(highRiskNS, ","),
 			Type:        IssuePartialDanglingNs,
 			Method:      MethodServfail,
 			Fingerprint: nil,
+			Confidence:  ConfidenceMedium,
+		}
+		findings = append(findings, finding)
+	} else if len(mediumRiskNS) > 0 && len(mediumRiskNS) == len(domainAuthorities) {
+		// all NS are medium risk - likely dangling NS
+		finding := &Match{
+			Domain:      domain,
+			Target:      strings.Join(mediumRiskNS, ","),
+			Type:        IssueDanglingNs,
+			Method:      MethodServfail,
+			Fingerprint: nil,
+			Confidence:  ConfidenceLow,
 		}
 		findings = append(findings, finding)
 	}

@@ -102,6 +102,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 									Type:        IssueDandlingCname,
 									Method:      detectionMethod,
 									Fingerprint: fp,
+									Confidence:  fp.Confidence(),
 								}
 								findings = append(findings, finding)
 							}
@@ -131,6 +132,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 							Type:        IssueDandlingCname,
 							Method:      detectionMethod,
 							Fingerprint: fp,
+							Confidence:  fp.Confidence(),
 						}
 						findings = append(findings, finding)
 					}
@@ -152,6 +154,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					Type:        IssueUnregistered,
 					Method:      MethodSoaCheck,
 					Fingerprint: nil,
+					Confidence:  ConfidenceHigh, // unregistered domain is high confidence
 				}
 				findings = append(findings, finding)
 			}
@@ -175,6 +178,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 						Type:        IssueDandlingCname,
 						Method:      detectionMethod,
 						Fingerprint: fp,
+						Confidence:  fp.Confidence(),
 					}
 					findings = append(findings, finding)
 				}
