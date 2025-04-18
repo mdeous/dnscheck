@@ -10,10 +10,11 @@ import (
 
 type Client struct {
 	cache    *Cache
-	resolver *Resolver
+	Resolver *Resolver
 }
 
-func (c *Client) query(nameserver string, domain string, reqType uint16) (*dns.Msg, error) {
+// Query performs a DNS query using the specified nameserver
+func (c *Client) Query(nameserver string, domain string, reqType uint16) (*dns.Msg, error) {
 	cachedResp := c.cache.Get(nameserver, domain, reqType)
 	if cachedResp != nil {
 		return cachedResp, nil
@@ -29,7 +30,7 @@ func (c *Client) query(nameserver string, domain string, reqType uint16) (*dns.M
 }
 
 func (c *Client) GetCNAME(domain string) ([]string, error) {
-	ret, err := c.query(c.resolver.Get(), domain, dns.TypeCNAME)
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeCNAME)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -43,7 +44,7 @@ func (c *Client) GetCNAME(domain string) ([]string, error) {
 }
 
 func (c *Client) GetSOA(domain string) ([]string, error) {
-	ret, err := c.query(c.resolver.Get(), domain, dns.TypeSOA)
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeSOA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -57,7 +58,7 @@ func (c *Client) GetSOA(domain string) ([]string, error) {
 }
 
 func (c *Client) GetA(domain string) ([]string, error) {
-	ret, err := c.query(c.resolver.Get(), domain, dns.TypeA)
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get A for %s: %v", domain, err)
 	}
@@ -71,7 +72,7 @@ func (c *Client) GetA(domain string) ([]string, error) {
 }
 
 func (c *Client) GetAAAA(domain string) ([]string, error) {
-	ret, err := c.query(c.resolver.Get(), domain, dns.TypeAAAA)
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeAAAA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get AAAA for %s: %v", domain, err)
 	}
@@ -98,7 +99,7 @@ func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 		return result
 	}
 
-	ret, err := c.query(nameserver, domain, dns.TypeNS)
+	ret, err := c.Query(nameserver, domain, dns.TypeNS)
 	if err != nil {
 		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
 	}
@@ -121,7 +122,7 @@ func (c *Client) DomainIsSERVFAIL(domain string) bool {
 		return false
 	}
 
-	rootNameservers, err := c.GetNS(rootDomain, c.resolver.Get())
+	rootNameservers, err := c.GetNS(rootDomain, c.Resolver.Get())
 	if err != nil {
 		log.Warn("%s: unable to get nameserver: %v", domain, err)
 		return false
@@ -152,7 +153,7 @@ func (c *Client) DomainIsSERVFAIL(domain string) bool {
 }
 
 func (c *Client) DomainIsNXDOMAIN(domain string) bool {
-	ret, err := c.query(c.resolver.Get(), domain, dns.TypeA)
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeA)
 	if err != nil {
 		log.Warn("%s: type A request to check NXDOMAIN failed: %v", domain, err)
 		return false
@@ -217,6 +218,6 @@ func (c *Client) Resolve(domain string) []string {
 func NewClient() *Client {
 	return &Client{
 		cache:    NewCache(),
-		resolver: NewResolver(),
+		Resolver: NewResolver(),
 	}
 }

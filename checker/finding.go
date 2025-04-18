@@ -9,9 +9,11 @@ import (
 type IssueType string
 
 const (
-	IssueDandlingCname IssueType = "dangling_cname_record"
-	IssueDanglingNs              = "dangling_ns_record"
-	IssueUnregistered            = "unregistered_domain"
+	IssueDanglingCname   IssueType = "dangling_cname_record"
+	IssueDanglingNs                = "dangling_ns_record"
+	IssuePartialDanglingNs         = "partial_dangling_ns_record"
+	IssueUnregistered              = "unregistered_domain"
+	IssueUnregisteredNs            = "unregistered_ns_record"
 )
 
 type DetectionMethod string
