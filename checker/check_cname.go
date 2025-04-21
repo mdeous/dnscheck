@@ -99,10 +99,11 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 								finding := &Match{
 									Domain:      domain,
 									Target:      a,
-									Type:        IssueDandlingCname,
+									Type:        IssueDanglingCname,
 									Method:      detectionMethod,
 									Fingerprint: fp,
 									Confidence:  fp.Confidence(),
+									Reason:      fmt.Sprintf("A record %s matches known service %s", a, fp.Name),
 								}
 								findings = append(findings, finding)
 							}
@@ -129,10 +130,11 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 						finding := &Match{
 							Domain:      domain,
 							Target:      cname,
-							Type:        IssueDandlingCname,
+							Type:        IssueDanglingCname,
 							Method:      detectionMethod,
 							Fingerprint: fp,
 							Confidence:  fp.Confidence(),
+							Reason:      fmt.Sprintf("CNAME record %s matches known service %s", cname, fp.Name),
 						}
 						findings = append(findings, finding)
 					}
@@ -155,6 +157,7 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					Method:      MethodSoaCheck,
 					Fingerprint: nil,
 					Confidence:  ConfidenceHigh, // unregistered domain is high confidence
+					Reason:      fmt.Sprintf("CNAME target domain %s is available for registration", cname),
 				}
 				findings = append(findings, finding)
 			}
@@ -175,10 +178,11 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					finding := &Match{
 						Domain:      domain,
 						Target:      strings.Join(resolveResults, ","),
-						Type:        IssueDandlingCname,
+						Type:        IssueDanglingCname,
 						Method:      detectionMethod,
 						Fingerprint: fp,
 						Confidence:  fp.Confidence(),
+						Reason:      fmt.Sprintf("Domain resolves to %s and matches fingerprint for %s", strings.Join(resolveResults, ","), fp.Name),
 					}
 					findings = append(findings, finding)
 				}

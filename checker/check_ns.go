@@ -1,11 +1,31 @@
 package checker
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/miekg/dns"
+	"golang.org/x/net/publicsuffix"
+)
+
+// scoring system for dangling NS detection
+type nsStatus struct {
+	name             string
+	unregistered     bool
+	soaFailed        bool
+	aFailed          bool
+	aaaaFailed       bool
+	danglingScore    int
+	responseReceived bool
+	failureReasons   []string
+}
+
 // CheckNS checks if provided domain has dangling NS records
 func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 	var findings []*Match
 
 	// get root domain
-	rootDomain, err := c.dns.GetEffectiveTLDPlusOne(domain)
+	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
 		c.verbose("%s: unable to determine root domain: %v", domain, err)
 		return nil, err
@@ -23,20 +43,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		return nil, err
 	}
 
-	// scoring system for dangling NS detection
-	type nsStatus struct {
-		name             string
-		unregistered     bool
-		soaFailed        bool
-		aFailed          bool
-		aaaaFailed       bool
-		danglingScore    int
-		responseReceived bool
-	}
-
 	var nsStatuses []nsStatus
-	allDangling := true
-	partialDangling := false
 	var failedNS []string
 	var unregisteredNS []string
 
@@ -55,6 +62,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				c.verbose("%s: nameserver %s is NXDOMAIN", domain, authority)
 				status.unregistered = true
 				status.danglingScore += 3 // highest score for unregistered NS
+				status.failureReasons = append(status.failureReasons, "unregistered")
 				unregisteredNS = append(unregisteredNS, authority)
 			}
 		}
@@ -64,12 +72,20 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 
 	// if we found unregistered nameservers, report them
 	if len(unregisteredNS) > 0 {
+		var reasons []string
+		for _, status := range nsStatuses {
+			if status.unregistered {
+				reasons = append(reasons, fmt.Sprintf("nameserver %s is unregistered (NXDOMAIN)", status.name))
+			}
+		}
+		
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(unregisteredNS, ","),
 			Type:        IssueUnregisteredNs,
 			Method:      MethodNxdomain,
 			Fingerprint: nil,
+			Reason:      strings.Join(reasons, "; "),
 			Confidence:  ConfidenceHigh, // unregistered NS is a high confidence finding
 		}
 		findings = append(findings, finding)
@@ -95,6 +111,17 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			nsStatuses[i].soaFailed = true
 			nsStatuses[i].danglingScore += 2 // SOA failure is a strong indicator
 			
+			if errSOA != nil {
+				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+					fmt.Sprintf("SOA query failed: %v", errSOA))
+			} else if soaResp != nil {
+				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+					fmt.Sprintf("SOA query returned %s with %d answers", 
+						dns.RcodeToString[soaResp.Rcode], len(soaResp.Answer)))
+			} else {
+				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "SOA query returned no response")
+			}
+			
 			// query A record
 			aResp, errA := c.dns.Query(authorityAddr, domain, dns.TypeA)
 			if errA == nil && aResp != nil && aResp.Rcode == dns.RcodeSuccess && len(aResp.Answer) > 0 {
@@ -103,6 +130,17 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			} else {
 				nsStatuses[i].aFailed = true
 				nsStatuses[i].danglingScore += 1
+				
+				if errA != nil {
+					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+						fmt.Sprintf("A query failed: %v", errA))
+				} else if aResp != nil {
+					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+						fmt.Sprintf("A query returned %s with %d answers", 
+							dns.RcodeToString[aResp.Rcode], len(aResp.Answer)))
+				} else {
+					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "A query returned no response")
+				}
 			}
 
 			// query AAAA record if still dangling
@@ -114,6 +152,17 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				} else {
 					nsStatuses[i].aaaaFailed = true
 					nsStatuses[i].danglingScore += 1
+					
+					if errAAAA != nil {
+						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+							fmt.Sprintf("AAAA query failed: %v", errAAAA))
+					} else if aaaaResp != nil {
+						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
+							fmt.Sprintf("AAAA query returned %s with %d answers", 
+								dns.RcodeToString[aaaaResp.Rcode], len(aaaaResp.Answer)))
+					} else {
+						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "AAAA query returned no response")
+					}
 				}
 			}
 		}
@@ -122,9 +171,6 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			failedNS = append(failedNS, authority)
 			continue
 		}
-		// if any NS responds, it's not fully dangling
-		allDangling = false
-		partialDangling = true
 	}
 
 	// analyze results using the scoring system
@@ -144,6 +190,14 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 	// report findings based on risk levels
 	if len(highRiskNS) == len(domainAuthorities) {
 		// all NS are high risk - definite dangling NS
+		var reasons []string
+		for _, status := range nsStatuses {
+			if status.danglingScore >= 3 {
+				nsInfo := fmt.Sprintf("nameserver %s: %s", status.name, strings.Join(status.failureReasons, ", "))
+				reasons = append(reasons, nsInfo)
+			}
+		}
+		
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(highRiskNS, ","),
@@ -151,10 +205,19 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceHigh,
+			Reason:      strings.Join(reasons, "; "),
 		}
 		findings = append(findings, finding)
 	} else if len(highRiskNS) > 0 {
 		// some NS are high risk - partial dangling NS
+		var reasons []string
+		for _, status := range nsStatuses {
+			if status.danglingScore >= 3 {
+				nsInfo := fmt.Sprintf("nameserver %s: %s", status.name, strings.Join(status.failureReasons, ", "))
+				reasons = append(reasons, nsInfo)
+			}
+		}
+		
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(highRiskNS, ","),
@@ -162,10 +225,19 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceMedium,
+			Reason:      strings.Join(reasons, "; "),
 		}
 		findings = append(findings, finding)
 	} else if len(mediumRiskNS) > 0 && len(mediumRiskNS) == len(domainAuthorities) {
 		// all NS are medium risk - likely dangling NS
+		var reasons []string
+		for _, status := range nsStatuses {
+			if status.danglingScore > 0 && status.danglingScore < 3 {
+				nsInfo := fmt.Sprintf("nameserver %s: %s", status.name, strings.Join(status.failureReasons, ", "))
+				reasons = append(reasons, nsInfo)
+			}
+		}
+		
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(mediumRiskNS, ","),
@@ -173,6 +245,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceLow,
+			Reason:      strings.Join(reasons, "; "),
 		}
 		findings = append(findings, finding)
 	}

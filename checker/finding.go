@@ -40,6 +40,7 @@ type Match struct {
 	Method      DetectionMethod `json:"method"`
 	Fingerprint *Fingerprint    `json:"fingerprint"`
 	Confidence  ConfidenceLevel `json:"confidence"`
+	Reason      string          `json:"reason"`
 }
 
 func (m *Match) String() string {
@@ -47,8 +48,14 @@ func (m *Match) String() string {
 	if m.Fingerprint != nil {
 		fpName = m.Fingerprint.Name
 	}
-	return fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)", 
+	baseOutput := fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)", 
 		fpName, m.Domain, m.Target, m.Type, m.Method, m.Confidence)
+	
+	if m.Reason != "" {
+		return baseOutput + fmt.Sprintf(" - %s", m.Reason)
+	}
+	
+	return baseOutput
 }
 
 type DomainFinding struct {
