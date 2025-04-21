@@ -53,11 +53,11 @@ jobs:
           echo "version=${version}" >> $GITHUB_OUTPUT
 
       - name: Publish release
-        uses: marvinpinto/action-automatic-releases@919008cf3f741b179569b7a6fb4d8860689ab7f0 # v1.2.1
+        uses: softprops/action-gh-release@v2
         with:
-          automatic_release_tag: ${{ steps.get_version.outputs.version }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.get_version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: ${{ github.ref == 'refs/heads/main' }}
-          title: ${{ steps.get_version.outputs.version }}
+          name: ${{ steps.get_version.outputs.version }}
           files: |
             build/dnscheck-*
