@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type IssueType string
@@ -40,7 +41,7 @@ type Match struct {
 	Method      DetectionMethod `json:"method"`
 	Fingerprint *Fingerprint    `json:"fingerprint"`
 	Confidence  ConfidenceLevel `json:"confidence"`
-	Reason      string          `json:"reason"`
+	Reasons     []string        `json:"reasons"`
 }
 
 func (m *Match) String() string {
@@ -51,8 +52,8 @@ func (m *Match) String() string {
 	baseOutput := fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)", 
 		fpName, m.Domain, m.Target, m.Type, m.Method, m.Confidence)
 	
-	if m.Reason != "" {
-		return baseOutput + fmt.Sprintf(" - %s", m.Reason)
+	if len(m.Reasons) > 0 {
+		return baseOutput + fmt.Sprintf(" - %s", strings.Join(m.Reasons, ", "))
 	}
 	
 	return baseOutput

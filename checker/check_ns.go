@@ -85,8 +85,8 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Type:        IssueUnregisteredNs,
 			Method:      MethodNxdomain,
 			Fingerprint: nil,
-			Reason:      strings.Join(reasons, "; "),
 			Confidence:  ConfidenceHigh, // unregistered NS is a high confidence finding
+			Reasons:     reasons,
 		}
 		findings = append(findings, finding)
 	}
@@ -205,7 +205,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceHigh,
-			Reason:      strings.Join(reasons, "; "),
+			Reasons:     reasons,
 		}
 		findings = append(findings, finding)
 	} else if len(highRiskNS) > 0 {
@@ -225,7 +225,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceMedium,
-			Reason:      strings.Join(reasons, "; "),
+			Reasons:     reasons,
 		}
 		findings = append(findings, finding)
 	} else if len(mediumRiskNS) > 0 && len(mediumRiskNS) == len(domainAuthorities) {
@@ -245,7 +245,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceLow,
-			Reason:      strings.Join(reasons, "; "),
+			Reasons:     reasons,
 		}
 		findings = append(findings, finding)
 	}
