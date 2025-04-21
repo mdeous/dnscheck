@@ -115,6 +115,20 @@ func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
+func (c *Client) GetMX(domain string) ([]string, error) {
+	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeMX)
+	if err != nil {
+		return nil, fmt.Errorf("could not get MX for %s: %v", domain, err)
+	}
+	var records []string
+	for _, answer := range ret.Answer {
+		if record, isMX := answer.(*dns.MX); isMX {
+			records = append(records, strings.TrimRight(record.Mx, "."))
+		}
+	}
+	return records, nil
+}
+
 func (c *Client) DomainIsSERVFAIL(domain string) bool {
 	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {

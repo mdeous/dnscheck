@@ -82,6 +82,7 @@ func NewChecker(config *Config) *Checker {
 	d.checkFuncs = []CheckFunc{
 		d.CheckCNAME,
 		d.CheckNS,
+		d.CheckMX,
 	}
 	return d
 }

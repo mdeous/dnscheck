@@ -13,6 +13,7 @@ const (
 	IssueDanglingCname   IssueType = "dangling_cname_record"
 	IssueDanglingNs                = "dangling_ns_record"
 	IssuePartialDanglingNs         = "partial_dangling_ns_record"
+	IssueDanglingMx                = "dangling_mx_record"
 	IssueUnregistered              = "unregistered_domain"
 	IssueUnregisteredNs            = "unregistered_ns_record"
 )
