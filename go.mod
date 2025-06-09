@@ -9,7 +9,7 @@ require (
 	github.com/miekg/dns v1.1.66
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-	golang.org/x/net v0.40.0
+	golang.org/x/net v0.41.0
 )
 
 require (
