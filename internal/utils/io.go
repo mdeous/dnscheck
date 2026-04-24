@@ -2,9 +2,10 @@ package utils
 
 import (
 	"bufio"
-	"github.com/mdeous/dnscheck/internal/log"
 	"os"
 	"strings"
+
+	"github.com/mdeous/dnscheck/internal/log"
 )
 
 func ReadLines(file string, output chan<- string) {
@@ -22,9 +23,10 @@ func ReadLines(file string, output chan<- string) {
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		line := strings.Trim(scanner.Text(), " \r\n")
-		if len(line) > 0 {
-			output <- line
+		if strings.HasPrefix(line, "#") || len(line) == 0 {
+			continue
 		}
+		output <- line
 	}
 	err = scanner.Err()
 	if err != nil {

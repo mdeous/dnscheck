@@ -46,7 +46,7 @@ func (c *Client) GetCNAME(domain string) ([]string, error) {
 func (c *Client) GetSOA(domain string) ([]string, error) {
 	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeSOA)
 	if err != nil {
-		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
+		return nil, fmt.Errorf("could not get SOA for %s: %v", domain, err)
 	}
 	var records []string
 	for _, answer := range ret.Answer {
@@ -105,7 +105,7 @@ func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 	}
 	var records []string
 	if ret.Rcode != dns.RcodeSuccess {
-		return nil, fmt.Errorf("could not get NS for %s: %v", domain, err)
+		return nil, fmt.Errorf("could not get NS for %s: %s", domain, dns.RcodeToString[ret.Rcode])
 	}
 	if len(ret.Answer) > 0 {
 		records = parseRecords(ret.Answer)

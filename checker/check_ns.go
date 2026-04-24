@@ -103,40 +103,45 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 
 		// query SOA record directly from this nameserver
 		soaResp, errSOA := c.dns.Query(authorityAddr, domain, dns.TypeSOA)
-		if errSOA == nil && soaResp != nil && soaResp.Rcode == dns.RcodeSuccess && len(soaResp.Answer) > 0 {
+		if errSOA != nil {
+			// Network error (timeout, unreachable, hostname lookup failure) — inconclusive.
+			// A dangling NS responds with SERVFAIL/REFUSED; it does not fail to respond.
+			nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+				fmt.Sprintf("SOA query unreachable: %v", errSOA))
+			continue
+		}
+		if soaResp != nil && soaResp.Rcode == dns.RcodeSuccess && len(soaResp.Answer) > 0 {
 			// if we get a valid SOA response, the NS is definitely not dangling
 			isDangling = false
 			nsStatuses[i].responseReceived = true
 		} else {
 			nsStatuses[i].soaFailed = true
 			nsStatuses[i].danglingScore += 2 // SOA failure is a strong indicator
-			
-			if errSOA != nil {
-				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-					fmt.Sprintf("SOA query failed: %v", errSOA))
-			} else if soaResp != nil {
-				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-					fmt.Sprintf("SOA query returned %s with %d answers", 
+
+			if soaResp != nil {
+				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+					fmt.Sprintf("SOA query returned %s with %d answers",
 						dns.RcodeToString[soaResp.Rcode], len(soaResp.Answer)))
 			} else {
 				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "SOA query returned no response")
 			}
-			
+
 			// query A record
 			aResp, errA := c.dns.Query(authorityAddr, domain, dns.TypeA)
-			if errA == nil && aResp != nil && aResp.Rcode == dns.RcodeSuccess && len(aResp.Answer) > 0 {
+			if errA != nil {
+				// Network error — inconclusive, do not score.
+				nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+					fmt.Sprintf("A query unreachable: %v", errA))
+			} else if aResp != nil && aResp.Rcode == dns.RcodeSuccess && len(aResp.Answer) > 0 {
 				isDangling = false
 				nsStatuses[i].responseReceived = true
 			} else {
 				nsStatuses[i].aFailed = true
 				nsStatuses[i].danglingScore += 1
-				
-				if errA != nil {
-					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-						fmt.Sprintf("A query failed: %v", errA))
-				} else if aResp != nil {
-					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-						fmt.Sprintf("A query returned %s with %d answers", 
+
+				if aResp != nil {
+					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+						fmt.Sprintf("A query returned %s with %d answers",
 							dns.RcodeToString[aResp.Rcode], len(aResp.Answer)))
 				} else {
 					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "A query returned no response")
@@ -146,19 +151,20 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 			// query AAAA record if still dangling
 			if isDangling {
 				aaaaResp, errAAAA := c.dns.Query(authorityAddr, domain, dns.TypeAAAA)
-				if errAAAA == nil && aaaaResp != nil && aaaaResp.Rcode == dns.RcodeSuccess && len(aaaaResp.Answer) > 0 {
+				if errAAAA != nil {
+					// Network error — inconclusive, do not score.
+					nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+						fmt.Sprintf("AAAA query unreachable: %v", errAAAA))
+				} else if aaaaResp != nil && aaaaResp.Rcode == dns.RcodeSuccess && len(aaaaResp.Answer) > 0 {
 					isDangling = false
 					nsStatuses[i].responseReceived = true
 				} else {
 					nsStatuses[i].aaaaFailed = true
 					nsStatuses[i].danglingScore += 1
-					
-					if errAAAA != nil {
-						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-							fmt.Sprintf("AAAA query failed: %v", errAAAA))
-					} else if aaaaResp != nil {
-						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, 
-							fmt.Sprintf("AAAA query returned %s with %d answers", 
+
+					if aaaaResp != nil {
+						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons,
+							fmt.Sprintf("AAAA query returned %s with %d answers",
 								dns.RcodeToString[aaaaResp.Rcode], len(aaaaResp.Answer)))
 					} else {
 						nsStatuses[i].failureReasons = append(nsStatuses[i].failureReasons, "AAAA query returned no response")
