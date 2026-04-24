@@ -1,6 +1,6 @@
-[![Build](https://github.com/mdeous/dnscheck/actions/workflows/build.yml/badge.svg)](https://github.com/mdeous/dnscheck/actions/workflows/build.yml)
-
 # dnscheck
+
+[![Build](https://github.com/mdeous/dnscheck/actions/workflows/build.yml/badge.svg)](https://github.com/mdeous/dnscheck/actions/workflows/build.yml)
 
 ## Introduction
 
@@ -9,6 +9,7 @@
 - CNAME records pointing to an unclaimed resource (e.g. S3 bucket, GitHub pages, Azure CloudApp, etc.)
 - CNAME records pointing to an unregistered domain
 - Zone delegations pointing to an unclaimed zone
+- MX records pointing to unregistered domains
 
 Detection of CNAMEs pointing to unclaimed resources is based on the information available
 in [can-i-takeover-xyz](https://github.com/EdOverflow/can-i-take-over-xyz).
