@@ -42,6 +42,14 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		dnsTimeout, err := cmd.Flags().GetUint("dns-timeout")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		dnsRetries, err := cmd.Flags().GetUint("dns-retries")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 		edgeCases, err := cmd.Flags().GetBool("edge-cases")
 		if err != nil {
 			log.Fatal(err.Error())
@@ -57,6 +65,8 @@ var rootCmd = &cobra.Command{
 			Workers:        workers,
 			CustomFpFile:   fpFile,
 			HttpTimeout:    timeout,
+			DnsTimeout:     dnsTimeout,
+			DnsRetries:     dnsRetries,
 			CheckEdgeCases: edgeCases,
 		})
 
@@ -133,6 +143,8 @@ func init() {
 	rootCmd.Flags().IntP("workers", "w", 10, "amount of concurrent workers")
 	rootCmd.Flags().StringP("output", "o", "", "file to write findings to")
 	rootCmd.Flags().UintP("timeout", "t", 10, "timeout for HTTP requests")
+	rootCmd.Flags().Uint("dns-timeout", 3, "timeout in seconds for individual DNS queries")
+	rootCmd.Flags().Uint("dns-retries", 2, "number of retry attempts on DNS query timeout")
 	rootCmd.Flags().BoolP("edge-cases", "e", false, "include edge-case fingerprints (might cause false positives)")
 	rootCmd.Flags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 	rootCmd.Flags().BoolP("verbose", "v", false, "increase application verbosity")

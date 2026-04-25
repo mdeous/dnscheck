@@ -4,6 +4,7 @@ import (
 	"github.com/mdeous/dnscheck/dns"
 	"github.com/mdeous/dnscheck/internal/log"
 	"sync"
+	"time"
 )
 
 type CheckFunc func(string) ([]*Match, error)
@@ -13,6 +14,8 @@ type Config struct {
 	Workers        int
 	CustomFpFile   string
 	HttpTimeout    uint
+	DnsTimeout     uint
+	DnsRetries     uint
 	CheckEdgeCases bool
 }
 
@@ -77,7 +80,7 @@ func NewChecker(config *Config) *Checker {
 		fingerprints: LoadFingerprints(config.CustomFpFile, config.CheckEdgeCases),
 		Domains:      make(chan string),
 		findings:     make(chan *DomainFinding),
-		dns:          dns.NewClient(),
+		dns:          dns.NewClient(time.Duration(config.DnsTimeout)*time.Second, int(config.DnsRetries)),
 	}
 	d.checkFuncs = []CheckFunc{
 		d.CheckCNAME,

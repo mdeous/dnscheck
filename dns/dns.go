@@ -1,16 +1,45 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mdeous/dnscheck/internal/log"
 	"github.com/miekg/dns"
 	"golang.org/x/net/publicsuffix"
+	"net"
 	"strings"
+	"time"
 )
+
+const retryBackoff = 100 * time.Millisecond
 
 type Client struct {
 	cache    *Cache
 	Resolver *Resolver
+	client   *dns.Client
+	retries  int
+}
+
+// exchange performs a DNS exchange with retry on timeout errors.
+func (c *Client) exchange(msg *dns.Msg, nameserver string) (*dns.Msg, error) {
+	attempts := c.retries + 1
+	var lastErr error
+	for i := range attempts {
+		resp, _, err := c.client.Exchange(msg, nameserver)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+		var netErr net.Error
+		if !errors.As(err, &netErr) || !netErr.Timeout() {
+			return nil, err
+		}
+		if i < attempts-1 {
+			log.Debug("DNS query to %s timed out (attempt %d/%d), retrying", nameserver, i+1, attempts)
+			time.Sleep(retryBackoff)
+		}
+	}
+	return nil, lastErr
 }
 
 // Query performs a DNS query using the specified nameserver
@@ -21,7 +50,7 @@ func (c *Client) Query(nameserver string, domain string, reqType uint16) (*dns.M
 	}
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(domain), reqType)
-	resp, err := dns.Exchange(msg, nameserver)
+	resp, err := c.exchange(msg, nameserver)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +184,7 @@ func (c *Client) DomainIsSERVFAIL(domain string) bool {
 		authority += ":53"
 		msg := new(dns.Msg)
 		msg.SetQuestion(dns.Fqdn(domain), dns.TypeA)
-		ret, err := dns.Exchange(msg, authority)
+		ret, err := c.exchange(msg, authority)
 		if err != nil {
 			continue
 		}
@@ -229,9 +258,11 @@ func (c *Client) Resolve(domain string) []string {
 	return resolutions
 }
 
-func NewClient() *Client {
+func NewClient(timeout time.Duration, retries int) *Client {
 	return &Client{
 		cache:    NewCache(),
 		Resolver: NewResolver(),
+		client:   &dns.Client{Timeout: timeout},
+		retries:  retries,
 	}
 }
