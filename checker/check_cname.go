@@ -160,6 +160,20 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 					Reasons:     []string{fmt.Sprintf("CNAME target domain %s is available for registration", cname)},
 				}
 				findings = append(findings, finding)
+			} else if c.dns.DomainIsNXDOMAIN(cname) {
+				// target does not resolve, but its domain cannot be registered,
+				// so the record is broken without being claimable
+				c.verbose("%s: CNAME target %s is NXDOMAIN but not claimable", domain, cname)
+				finding := &Match{
+					Domain:      domain,
+					Target:      cname,
+					Type:        IssueDanglingUnclaimable,
+					Method:      MethodNxdomain,
+					Fingerprint: nil,
+					Confidence:  ConfidenceMedium,
+					Reasons:     []string{fmt.Sprintf("CNAME target %s does not resolve, but its domain cannot be registered", cname)},
+				}
+				findings = append(findings, finding)
 			}
 		}
 	}

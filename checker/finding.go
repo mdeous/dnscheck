@@ -10,13 +10,23 @@ import (
 type IssueType string
 
 const (
-	IssueDanglingCname   IssueType = "dangling_cname_record"
-	IssueDanglingNs                = "dangling_ns_record"
-	IssuePartialDanglingNs         = "partial_dangling_ns_record"
-	IssueDanglingMx                = "dangling_mx_record"
-	IssueUnregistered              = "unregistered_domain"
-	IssueUnregisteredNs            = "unregistered_ns_record"
+	IssueDanglingCname     IssueType = "dangling_cname_record"
+	IssueDanglingNs                  = "dangling_ns_record"
+	IssuePartialDanglingNs           = "partial_dangling_ns_record"
+	IssueDanglingMx                  = "dangling_mx_record"
+	IssueUnregistered                = "unregistered_domain"
+	IssueUnregisteredNs              = "unregistered_ns_record"
+	// IssueDanglingUnclaimable is a record that points at something broken
+	// whose target cannot be claimed: a reserved name, or a delegation whose
+	// nameservers are all registered to someone else. Not a takeover, but
+	// still a misconfiguration worth fixing.
+	IssueDanglingUnclaimable = "dangling_record_unclaimable"
 )
+
+// Exploitable reports whether an issue lets an attacker claim the target.
+func (t IssueType) Exploitable() bool {
+	return t != IssueDanglingUnclaimable
+}
 
 type DetectionMethod string
 
@@ -45,18 +55,35 @@ type Match struct {
 	Reasons     []string        `json:"reasons"`
 }
 
+// MarshalJSON adds the derived exploitable flag, so consumers can split
+// takeover opportunities from plain misconfigurations without knowing the
+// issue types.
+func (m *Match) MarshalJSON() ([]byte, error) {
+	type match Match
+	return json.Marshal(struct {
+		*match
+		Exploitable bool `json:"exploitable"`
+	}{match: (*match)(m), Exploitable: m.Exploitable()})
+}
+
+// Exploitable reports whether this finding is a takeover opportunity rather
+// than a dangling record nobody can claim.
+func (m *Match) Exploitable() bool {
+	return m.Type.Exploitable()
+}
+
 func (m *Match) String() string {
 	fpName := "n/a"
 	if m.Fingerprint != nil {
 		fpName = m.Fingerprint.Name
 	}
-	baseOutput := fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)", 
+	baseOutput := fmt.Sprintf("[service: %s] %s -> %s [type=%s method=%s] (confidence: %s)",
 		fpName, m.Domain, m.Target, m.Type, m.Method, m.Confidence)
-	
+
 	if len(m.Reasons) > 0 {
 		return baseOutput + fmt.Sprintf(" - %s", strings.Join(m.Reasons, ", "))
 	}
-	
+
 	return baseOutput
 }
 

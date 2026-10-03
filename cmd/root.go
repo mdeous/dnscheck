@@ -94,7 +94,7 @@ var rootCmd = &cobra.Command{
 		chk.Scan()
 		for f := range chk.Findings() {
 			for _, match := range f.Matches {
-				log.Finding(match.String())
+				report(match)
 			}
 			if len(f.Matches) > 0 {
 				findings = append(findings, f)
@@ -106,14 +106,24 @@ var rootCmd = &cobra.Command{
 
 		// display results summary
 		if showSummary {
-			summary := fmt.Sprintf("Vulnerable domains: %d", fCount)
+			vuln, misconfig := 0, 0
+			for _, f := range findings {
+				for _, match := range f.Matches {
+					if match.Exploitable() {
+						vuln++
+					} else {
+						misconfig++
+					}
+				}
+			}
+			summary := fmt.Sprintf("Affected domains: %d", fCount)
 			if mCount > 0 {
-				summary += fmt.Sprintf(" (%d service matches)", mCount)
+				summary += fmt.Sprintf(" (%d takeover opportunities, %d dangling but not claimable)", vuln, misconfig)
 			}
 			log.Info(summary)
 			for _, f := range findings {
 				for _, match := range f.Matches {
-					log.Finding(match.String())
+					report(match)
 				}
 			}
 		}
@@ -149,4 +159,14 @@ func init() {
 	rootCmd.Flags().StringP("fingerprints", "f", "", "custom service fingerprints file")
 	rootCmd.Flags().BoolP("verbose", "v", false, "increase application verbosity")
 	rootCmd.Flags().BoolP("summary", "s", false, "show summary at the end of the scan")
+}
+
+// report prints a match, distinguishing takeover opportunities from dangling
+// records that nobody can claim.
+func report(match *checker.Match) {
+	if match.Exploitable() {
+		log.Finding(match.String())
+		return
+	}
+	log.Misconfig(match.String())
 }

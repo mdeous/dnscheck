@@ -25,14 +25,20 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 	// check each MX record for potential issues
 	for _, mx := range mxRecords {
 		c.verbose("%s: checking MX record: %s", domain, mx)
-		
+
 		// check if the MX hostname resolves
 		mxResolutions := c.dns.Resolve(mx)
 		if len(mxResolutions) == 0 {
 			// MX hostname doesn't resolve, check if it's NXDOMAIN
 			if c.dns.DomainIsNXDOMAIN(mx) {
 				c.verbose("%s: MX record %s is NXDOMAIN", domain, mx)
-				
+
+				// only a takeover if the MX hostname's domain can be registered
+				claimable, err := c.dns.DomainIsAvailable(mx)
+				if err != nil {
+					c.verbose("%s: error checking if MX %s is claimable: %v", domain, mx, err)
+					claimable = false
+				}
 				finding := &Match{
 					Domain:      domain,
 					Target:      mx,
@@ -41,6 +47,11 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 					Fingerprint: nil,
 					Confidence:  ConfidenceHigh,
 					Reasons:     []string{fmt.Sprintf("MX record %s is unregistered (NXDOMAIN)", mx)},
+				}
+				if !claimable {
+					finding.Type = IssueDanglingUnclaimable
+					finding.Confidence = ConfidenceMedium
+					finding.Reasons = []string{fmt.Sprintf("MX record %s does not resolve, but its domain cannot be registered", mx)}
 				}
 				findings = append(findings, finding)
 				continue
@@ -53,10 +64,10 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 			c.verbose("%s: error checking if MX %s is available: %v", domain, mx, err)
 			continue
 		}
-		
+
 		if available {
 			c.verbose("%s: MX record %s is available for registration", domain, mx)
-			
+
 			finding := &Match{
 				Domain:      domain,
 				Target:      mx,
@@ -74,19 +85,19 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 		soaRecords, err := c.dns.GetSOA(mx)
 		if err != nil || len(soaRecords) == 0 {
 			c.verbose("%s: MX record %s has no SOA record", domain, mx)
-			
+
 			// Try to get the root domain to check if it's properly configured
 			rootDomain, err := publicsuffix.EffectiveTLDPlusOne(mx)
 			if err != nil {
 				c.verbose("%s: unable to determine root domain for MX %s: %v", domain, mx, err)
 				continue
 			}
-			
+
 			// Check if the root domain has proper DNS configuration
 			rootSoaRecords, err := c.dns.GetSOA(rootDomain)
 			if err != nil || len(rootSoaRecords) == 0 {
 				c.verbose("%s: root domain %s for MX %s has no SOA record", domain, rootDomain, mx)
-				
+
 				finding := &Match{
 					Domain:      domain,
 					Target:      mx,

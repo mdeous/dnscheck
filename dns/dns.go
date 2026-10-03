@@ -42,6 +42,27 @@ func (c *Client) exchange(msg *dns.Msg, nameserver string) (*dns.Msg, error) {
 	return nil, lastErr
 }
 
+// queryRotate queries domain, moving to another resolver when one refuses or
+// fails outright. A REFUSED or SERVFAIL answer means "no usable reply", never
+// "no such record", so it must not be read as an empty answer set.
+func (c *Client) queryRotate(domain string, reqType uint16) (*dns.Msg, error) {
+	nameserver := c.Resolver.Get()
+	var lastErr error
+	for range c.Resolver.Count() {
+		ret, err := c.Query(nameserver, domain, reqType)
+		if err == nil {
+			if ret.Rcode == dns.RcodeSuccess || ret.Rcode == dns.RcodeNameError {
+				return ret, nil
+			}
+			lastErr = fmt.Errorf("%s answered %s", nameserver, dns.RcodeToString[ret.Rcode])
+		} else {
+			lastErr = err
+		}
+		nameserver = c.Resolver.Next()
+	}
+	return nil, fmt.Errorf("no resolver could answer %s: %v", domain, lastErr)
+}
+
 // Query performs a DNS query using the specified nameserver
 func (c *Client) Query(nameserver string, domain string, reqType uint16) (*dns.Msg, error) {
 	cachedResp := c.cache.Get(nameserver, domain, reqType)
@@ -59,7 +80,7 @@ func (c *Client) Query(nameserver string, domain string, reqType uint16) (*dns.M
 }
 
 func (c *Client) GetCNAME(domain string) ([]string, error) {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeCNAME)
+	ret, err := c.queryRotate(domain, dns.TypeCNAME)
 	if err != nil {
 		return nil, fmt.Errorf("could not get CNAME for %s: %v", domain, err)
 	}
@@ -73,7 +94,7 @@ func (c *Client) GetCNAME(domain string) ([]string, error) {
 }
 
 func (c *Client) GetSOA(domain string) ([]string, error) {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeSOA)
+	ret, err := c.queryRotate(domain, dns.TypeSOA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get SOA for %s: %v", domain, err)
 	}
@@ -87,7 +108,7 @@ func (c *Client) GetSOA(domain string) ([]string, error) {
 }
 
 func (c *Client) GetA(domain string) ([]string, error) {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeA)
+	ret, err := c.queryRotate(domain, dns.TypeA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get A for %s: %v", domain, err)
 	}
@@ -101,7 +122,7 @@ func (c *Client) GetA(domain string) ([]string, error) {
 }
 
 func (c *Client) GetAAAA(domain string) ([]string, error) {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeAAAA)
+	ret, err := c.queryRotate(domain, dns.TypeAAAA)
 	if err != nil {
 		return nil, fmt.Errorf("could not get AAAA for %s: %v", domain, err)
 	}
@@ -144,8 +165,36 @@ func (c *Client) GetNS(domain string, nameserver string) ([]string, error) {
 	return records, nil
 }
 
+// GetDelegation returns the nameservers a domain is actually delegated to, and
+// nothing else. GetNS also accepts an SOA as a nameserver, so a name with no
+// delegation of its own yields the parent zone's SOA MNAME and then looks
+// dangling; the delegation check needs NS records or nothing.
+func (c *Client) GetDelegation(domain string, nameserver string) ([]string, error) {
+	ret, err := c.Query(nameserver, domain, dns.TypeNS)
+	if err != nil {
+		return nil, fmt.Errorf("could not get delegation for %s: %v", domain, err)
+	}
+	if ret.Rcode != dns.RcodeSuccess {
+		return nil, fmt.Errorf("could not get delegation for %s: %s", domain, dns.RcodeToString[ret.Rcode])
+	}
+	// a parent returns a child's delegation as a referral, so the NS records
+	// arrive in the authority section; only the apex answers in-section.
+	var records []string
+	for _, rrs := range [][]dns.RR{ret.Answer, ret.Ns} {
+		for _, answer := range rrs {
+			if record, isNS := answer.(*dns.NS); isNS {
+				records = append(records, record.Ns)
+			}
+		}
+		if len(records) > 0 {
+			break
+		}
+	}
+	return records, nil
+}
+
 func (c *Client) GetMX(domain string) ([]string, error) {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeMX)
+	ret, err := c.queryRotate(domain, dns.TypeMX)
 	if err != nil {
 		return nil, fmt.Errorf("could not get MX for %s: %v", domain, err)
 	}
@@ -158,6 +207,24 @@ func (c *Client) GetMX(domain string) ([]string, error) {
 	return records, nil
 }
 
+// GetRootNS looks up a domain's nameservers via the public resolvers, moving on
+// when one refuses rather than reporting "no nameservers".
+func (c *Client) GetRootNS(domain string) ([]string, error) {
+	nameserver := c.Resolver.Get()
+	var lastErr error
+	for range c.Resolver.Count() {
+		records, err := c.GetNS(domain, nameserver)
+		if err == nil && len(records) > 0 {
+			return records, nil
+		}
+		if err != nil {
+			lastErr = err
+		}
+		nameserver = c.Resolver.Next()
+	}
+	return nil, fmt.Errorf("no resolver could answer NS for %s: %v", domain, lastErr)
+}
+
 func (c *Client) DomainIsSERVFAIL(domain string) bool {
 	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
@@ -165,7 +232,7 @@ func (c *Client) DomainIsSERVFAIL(domain string) bool {
 		return false
 	}
 
-	rootNameservers, err := c.GetNS(rootDomain, c.Resolver.Get())
+	rootNameservers, err := c.GetRootNS(rootDomain)
 	if err != nil {
 		log.Warn("%s: unable to get nameserver: %v", domain, err)
 		return false
@@ -196,7 +263,7 @@ func (c *Client) DomainIsSERVFAIL(domain string) bool {
 }
 
 func (c *Client) DomainIsNXDOMAIN(domain string) bool {
-	ret, err := c.Query(c.Resolver.Get(), domain, dns.TypeA)
+	ret, err := c.queryRotate(domain, dns.TypeA)
 	if err != nil {
 		log.Warn("%s: type A request to check NXDOMAIN failed: %v", domain, err)
 		return false
@@ -204,7 +271,34 @@ func (c *Client) DomainIsNXDOMAIN(domain string) bool {
 	return ret.Rcode == dns.RcodeNameError
 }
 
+// reservedTLDs and reservedDomains can never be registered by anyone: RFC 2606
+// (.test/.example/.invalid/.localhost, example.com/net/org) and RFC 6761.
+var reservedTLDs = []string{"test", "example", "invalid", "localhost", "local", "onion"}
+
+var reservedDomains = []string{"example.com", "example.net", "example.org"}
+
+// IsReserved reports whether a name sits under a special-use TLD or domain, and
+// so is not available to register however it resolves.
+func IsReserved(domain string) bool {
+	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
+	for _, d := range reservedDomains {
+		if domain == d || strings.HasSuffix(domain, "."+d) {
+			return true
+		}
+	}
+	for _, tld := range reservedTLDs {
+		if domain == tld || strings.HasSuffix(domain, "."+tld) {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Client) DomainIsAvailable(domain string) (bool, error) {
+	// reserved names resolve like anything else but cannot be registered
+	if IsReserved(domain) {
+		return false, nil
+	}
 	// extract root domain from CNAME target
 	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {

@@ -20,6 +20,22 @@ type nsStatus struct {
 	failureReasons   []string
 }
 
+// nsIssueType picks the issue type for a dangling delegation. A delegation is
+// only claimable when one of its nameservers sits on an unregistered domain;
+// if every nameserver is registered to someone else the delegation is broken
+// but nobody can take it over.
+func nsIssueType(statuses []nsStatus, partial bool) IssueType {
+	for _, status := range statuses {
+		if status.unregistered {
+			if partial {
+				return IssuePartialDanglingNs
+			}
+			return IssueDanglingNs
+		}
+	}
+	return IssueDanglingUnclaimable
+}
+
 // CheckNS checks if provided domain has dangling NS records
 func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 	var findings []*Match
@@ -31,16 +47,21 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		return nil, err
 	}
 	// get root nameservers
-	rootNameservers, err := c.dns.GetNS(rootDomain, c.dns.Resolver.Get())
+	rootNameservers, err := c.dns.GetRootNS(rootDomain)
 	if err != nil || len(rootNameservers) == 0 {
 		c.verbose("%s: unable to get root NS: %v", domain, err)
 		return nil, err
 	}
-	// get authoritative NS for the domain
-	domainAuthorities, err := c.dns.GetNS(domain, rootNameservers[0]+":53")
-	if err != nil || len(domainAuthorities) == 0 {
+	// get the domain's own delegation, if it has one
+	domainAuthorities, err := c.dns.GetDelegation(domain, rootNameservers[0]+":53")
+	if err != nil {
 		c.verbose("%s: unable to get authoritative NS: %v", domain, err)
 		return nil, err
+	}
+	if len(domainAuthorities) == 0 {
+		// not a delegated zone, so there is no delegation to dangle
+		c.verbose("%s: no NS delegation of its own, skipping NS checks", domain)
+		return nil, nil
 	}
 
 	var nsStatuses []nsStatus
@@ -78,7 +99,7 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				reasons = append(reasons, fmt.Sprintf("nameserver %s is unregistered (NXDOMAIN)", status.name))
 			}
 		}
-		
+
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(unregisteredNS, ","),
@@ -203,11 +224,11 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				reasons = append(reasons, nsInfo)
 			}
 		}
-		
+
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(highRiskNS, ","),
-			Type:        IssueDanglingNs,
+			Type:        nsIssueType(nsStatuses, false),
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceHigh,
@@ -223,11 +244,11 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				reasons = append(reasons, nsInfo)
 			}
 		}
-		
+
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(highRiskNS, ","),
-			Type:        IssuePartialDanglingNs,
+			Type:        nsIssueType(nsStatuses, true),
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceMedium,
@@ -243,11 +264,11 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 				reasons = append(reasons, nsInfo)
 			}
 		}
-		
+
 		finding := &Match{
 			Domain:      domain,
 			Target:      strings.Join(mediumRiskNS, ","),
-			Type:        IssueDanglingNs,
+			Type:        nsIssueType(nsStatuses, false),
 			Method:      MethodServfail,
 			Fingerprint: nil,
 			Confidence:  ConfidenceLow,
