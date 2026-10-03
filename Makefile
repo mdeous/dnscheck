@@ -9,7 +9,7 @@ endif
 LDFLAGS := "-X github.com/mdeous/dnscheck/cmd.version=$(VERSION)"
 GO_FLAGS := -ldflags $(LDFLAGS)
 
-.PHONY: all clean rebuild deps update-deps cross-compile help
+.PHONY: all clean rebuild deps update-deps cross-compile test lint help
 
 $(BINARY_NAME):
 	$(GO_BINARY) build $(GO_FLAGS) -o $(BINARY_NAME) .
@@ -21,6 +21,13 @@ clean: ## Clean artifacts from previous build
 	@rm -rf ./build
 
 rebuild: clean all ## Delete existing artifacts and rebuild
+
+test: ## Run the test suite with the race detector
+	$(GO_BINARY) test -race ./...
+
+lint: ## Run formatting and static analysis checks
+	@test -z "$$(gofmt -l . | grep -v can-i-take-over-xyz)" || { echo "gofmt needed:"; gofmt -l . | grep -v can-i-take-over-xyz; exit 1; }
+	$(GO_BINARY) vet ./...
 
 deps: ## Fetch project dependencies
 	$(GO_BINARY) get .

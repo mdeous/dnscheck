@@ -13,7 +13,7 @@ func (c *Checker) checkPattern(domain string, pattern string, body string) (bool
 		c.verbose("%s: Performing HTTP request to '%s'", domain, domain)
 		body, err = utils.HttpGetBody(domain, c.cfg.HttpTimeout)
 		if err != nil {
-			c.verbose(err.Error())
+			c.verbose("%s", err.Error())
 			return false, "", err
 		}
 	}

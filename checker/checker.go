@@ -46,7 +46,7 @@ func (c *Checker) scanWorker() {
 		for _, checkFunc := range c.checkFuncs {
 			findings, err := checkFunc(domain)
 			if err != nil {
-				log.Warn(err.Error())
+				log.Warn("%s", err.Error())
 			} else {
 				for _, finding := range findings {
 					result.Matches = append(result.Matches, finding)

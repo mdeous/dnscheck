@@ -16,47 +16,47 @@ var rootCmd = &cobra.Command{
 		// get command-line arguments
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		fpFile, err := cmd.Flags().GetString("fingerprints")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		singleDomain, err := cmd.Flags().GetString("domain")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		domainFile, err := cmd.Flags().GetString("domains-file")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		workers, err := cmd.Flags().GetInt("workers")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		output, err := cmd.Flags().GetString("output")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		timeout, err := cmd.Flags().GetUint("timeout")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		dnsTimeout, err := cmd.Flags().GetUint("dns-timeout")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		dnsRetries, err := cmd.Flags().GetUint("dns-retries")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		edgeCases, err := cmd.Flags().GetBool("edge-cases")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 		showSummary, err := cmd.Flags().GetBool("summary")
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("%s", err.Error())
 		}
 
 		// instanciate domain checker
@@ -120,7 +120,7 @@ var rootCmd = &cobra.Command{
 			if mCount > 0 {
 				summary += fmt.Sprintf(" (%d takeover opportunities, %d dangling but not claimable)", vuln, misconfig)
 			}
-			log.Info(summary)
+			log.Info("%s", summary)
 			for _, f := range findings {
 				for _, match := range f.Matches {
 					report(match)
@@ -165,8 +165,8 @@ func init() {
 // records that nobody can claim.
 func report(match *checker.Match) {
 	if match.Exploitable() {
-		log.Finding(match.String())
+		log.Finding("%s", match.String())
 		return
 	}
-	log.Misconfig(match.String())
+	log.Misconfig("%s", match.String())
 }
