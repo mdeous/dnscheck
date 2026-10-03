@@ -6,6 +6,22 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+// mxClassification decides how to report a dangling MX record, and whether
+// claimability is unknown. Downgrading to a plain misconfiguration requires
+// knowing the target domain cannot be registered; when the availability check
+// itself failed the takeover classification stands, at low confidence, rather
+// than a failed query quietly hiding a real finding.
+func mxClassification(claimable bool, lookupErr error) (IssueType, ConfidenceLevel, bool) {
+	switch {
+	case lookupErr != nil:
+		return IssueDanglingMx, ConfidenceLow, true
+	case !claimable:
+		return IssueDanglingUnclaimable, ConfidenceMedium, false
+	default:
+		return IssueDanglingMx, ConfidenceHigh, false
+	}
+}
+
 // CheckMX checks if provided domain has dangling MX records
 func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 	var findings []*Match
@@ -33,30 +49,27 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 			if c.dns.DomainIsNXDOMAIN(mx) {
 				c.verbose("%s: MX record %s is NXDOMAIN", domain, mx)
 
-				finding := &Match{
+				claimable, err := c.dns.DomainIsAvailable(mx)
+				if err != nil {
+					c.verbose("%s: could not establish whether MX %s is claimable: %v", domain, mx, err)
+				}
+				issue, confidence, unknown := mxClassification(claimable, err)
+				reasons := []string{fmt.Sprintf("MX record %s is unregistered (NXDOMAIN)", mx)}
+				switch {
+				case unknown:
+					reasons = append(reasons, "could not establish whether its domain is registerable")
+				case issue == IssueDanglingUnclaimable:
+					reasons = []string{fmt.Sprintf("MX record %s does not resolve, but its domain cannot be registered", mx)}
+				}
+				findings = append(findings, &Match{
 					Domain:      domain,
 					Target:      mx,
-					Type:        IssueDanglingMx,
+					Type:        issue,
 					Method:      MethodNxdomain,
 					Fingerprint: nil,
-					Confidence:  ConfidenceHigh,
-					Reasons:     []string{fmt.Sprintf("MX record %s is unregistered (NXDOMAIN)", mx)},
-				}
-				// only downgrade to a plain misconfiguration once the domain is
-				// known to be unregisterable; if the check itself failed, keep
-				// the takeover classification rather than hide the finding
-				claimable, err := c.dns.DomainIsAvailable(mx)
-				switch {
-				case err != nil:
-					c.verbose("%s: could not establish whether MX %s is claimable: %v", domain, mx, err)
-					finding.Confidence = ConfidenceLow
-					finding.Reasons = append(finding.Reasons, "could not establish whether its domain is registerable")
-				case !claimable:
-					finding.Type = IssueDanglingUnclaimable
-					finding.Confidence = ConfidenceMedium
-					finding.Reasons = []string{fmt.Sprintf("MX record %s does not resolve, but its domain cannot be registered", mx)}
-				}
-				findings = append(findings, finding)
+					Confidence:  confidence,
+					Reasons:     reasons,
+				})
 				continue
 			}
 		}
