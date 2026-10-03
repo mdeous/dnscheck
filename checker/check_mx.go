@@ -33,12 +33,6 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 			if c.dns.DomainIsNXDOMAIN(mx) {
 				c.verbose("%s: MX record %s is NXDOMAIN", domain, mx)
 
-				// only a takeover if the MX hostname's domain can be registered
-				claimable, err := c.dns.DomainIsAvailable(mx)
-				if err != nil {
-					c.verbose("%s: error checking if MX %s is claimable: %v", domain, mx, err)
-					claimable = false
-				}
 				finding := &Match{
 					Domain:      domain,
 					Target:      mx,
@@ -48,7 +42,16 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 					Confidence:  ConfidenceHigh,
 					Reasons:     []string{fmt.Sprintf("MX record %s is unregistered (NXDOMAIN)", mx)},
 				}
-				if !claimable {
+				// only downgrade to a plain misconfiguration once the domain is
+				// known to be unregisterable; if the check itself failed, keep
+				// the takeover classification rather than hide the finding
+				claimable, err := c.dns.DomainIsAvailable(mx)
+				switch {
+				case err != nil:
+					c.verbose("%s: could not establish whether MX %s is claimable: %v", domain, mx, err)
+					finding.Confidence = ConfidenceLow
+					finding.Reasons = append(finding.Reasons, "could not establish whether its domain is registerable")
+				case !claimable:
 					finding.Type = IssueDanglingUnclaimable
 					finding.Confidence = ConfidenceMedium
 					finding.Reasons = []string{fmt.Sprintf("MX record %s does not resolve, but its domain cannot be registered", mx)}

@@ -12,6 +12,8 @@ import (
 type nsStatus struct {
 	name             string
 	unregistered     bool
+	registered       bool // hostname resolves, so it is definitely someone's
+	inconclusive     bool // neither resolved nor confirmed NXDOMAIN
 	soaFailed        bool
 	aFailed          bool
 	aaaaFailed       bool
@@ -21,16 +23,19 @@ type nsStatus struct {
 }
 
 // nsIssueType picks the issue type for a dangling delegation. A delegation is
-// only claimable when one of its nameservers sits on an unregistered domain;
-// if every nameserver is registered to someone else the delegation is broken
-// but nobody can take it over.
+// only claimable when one of its nameservers sits on an unregistered domain,
+// so a delegation whose nameservers are all registered to someone else is
+// broken without being a takeover. Downgrading to that needs every nameserver
+// positively confirmed as registered: an inconclusive lookup must keep the
+// takeover classification, or a failed query quietly hides a real finding.
 func nsIssueType(statuses []nsStatus, partial bool) IssueType {
+	var takeover IssueType = IssueDanglingNs
+	if partial {
+		takeover = IssuePartialDanglingNs
+	}
 	for _, status := range statuses {
-		if status.unregistered {
-			if partial {
-				return IssuePartialDanglingNs
-			}
-			return IssueDanglingNs
+		if status.unregistered || !status.registered {
+			return takeover
 		}
 	}
 	return IssueDanglingUnclaimable
@@ -77,15 +82,20 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 
 		// check if the NS hostname itself resolves
 		nsResolutions := c.dns.Resolve(authority)
-		if len(nsResolutions) == 0 {
-			// NS hostname doesn't resolve, check if it's NXDOMAIN
-			if c.dns.DomainIsNXDOMAIN(authority) {
-				c.verbose("%s: nameserver %s is NXDOMAIN", domain, authority)
-				status.unregistered = true
-				status.danglingScore += 3 // highest score for unregistered NS
-				status.failureReasons = append(status.failureReasons, "unregistered")
-				unregisteredNS = append(unregisteredNS, authority)
-			}
+		if len(nsResolutions) > 0 {
+			// hostname resolves, so the domain behind it is registered
+			status.registered = true
+		} else if c.dns.DomainIsNXDOMAIN(authority) {
+			c.verbose("%s: nameserver %s is NXDOMAIN", domain, authority)
+			status.unregistered = true
+			status.danglingScore += 3 // highest score for unregistered NS
+			status.failureReasons = append(status.failureReasons, "unregistered")
+			unregisteredNS = append(unregisteredNS, authority)
+		} else {
+			// did not resolve and NXDOMAIN was not confirmed: the lookup may
+			// simply have failed, so claimability is unknown
+			c.verbose("%s: nameserver %s registration status inconclusive", domain, authority)
+			status.inconclusive = true
 		}
 
 		nsStatuses = append(nsStatuses, status)
