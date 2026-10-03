@@ -63,9 +63,17 @@ func TestNsIssueType(t *testing.T) {
 			want:     IssuePartialDanglingNs,
 		},
 		{
-			name:     "no nameservers at all is not downgraded",
+			// nothing established about any nameserver is no basis for ruling
+			// out a takeover, whatever the caller happens to guard against
+			name:     "no nameserver information stays a takeover",
 			statuses: nil,
-			want:     IssueDanglingUnclaimable,
+			want:     IssueDanglingNs,
+		},
+		{
+			name:     "no nameserver information stays a partial takeover when partial",
+			statuses: nil,
+			partial:  true,
+			want:     IssuePartialDanglingNs,
 		},
 	}
 

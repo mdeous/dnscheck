@@ -26,12 +26,18 @@ type nsStatus struct {
 // only claimable when one of its nameservers sits on an unregistered domain,
 // so a delegation whose nameservers are all registered to someone else is
 // broken without being a takeover. Downgrading to that needs every nameserver
-// positively confirmed as registered: an inconclusive lookup must keep the
-// takeover classification, or a failed query quietly hides a real finding.
+// positively confirmed as registered: an inconclusive lookup, or no nameserver
+// information at all, must keep the takeover classification, or a failed query
+// quietly hides a real finding.
 func nsIssueType(statuses []nsStatus, partial bool) IssueType {
 	var takeover IssueType = IssueDanglingNs
 	if partial {
 		takeover = IssuePartialDanglingNs
+	}
+	if len(statuses) == 0 {
+		// nothing was established about any nameserver, so there is no basis
+		// for ruling out a takeover
+		return takeover
 	}
 	for _, status := range statuses {
 		if status.unregistered || !status.registered {
