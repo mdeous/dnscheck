@@ -179,7 +179,10 @@ func (c *Checker) CheckCNAME(domain string) ([]*Match, error) {
 	}
 
 	// target has no CNAME records, check fingerprints that don't expect one
-	resolveResults := c.dns.Resolve(domain)
+	resolveResults, errResolve := c.dns.Resolve(domain)
+	if errResolve != nil {
+		c.verbose("%s: could not determine whether it resolves: %v", domain, errResolve)
+	}
 	if len(findings) == 0 && len(resolveResults) > 0 {
 		c.verbose("%s: No CNAMEs but domain resolves, checking relevant fingerprints", domain)
 		for _, fp := range c.fingerprints {

@@ -306,9 +306,9 @@ func (c *Client) DomainIsAvailable(domain string) (bool, error) {
 		return false, err
 	}
 	// check if domain resolves
-	resolveResults := c.Resolve(rootDomain)
+	resolveResults, err := c.Resolve(rootDomain)
 	if err != nil {
-		log.Warn("Error while resolving %s: %v", rootDomain, err)
+		log.Warn("%s", err.Error())
 		return false, err
 	}
 	if len(resolveResults) == 0 {
@@ -326,30 +326,45 @@ func (c *Client) DomainIsAvailable(domain string) (bool, error) {
 	return false, nil
 }
 
-func (c *Client) Resolve(domain string) []string {
+// Resolve returns every address a domain resolves to, following CNAMEs.
+//
+// An empty result with a nil error means the domain genuinely does not resolve.
+// An error means the lookups failed and nothing could be established, which is
+// not the same thing: callers must not read it as an absent record.
+func (c *Client) Resolve(domain string) ([]string, error) {
 	var resolutions []string
+	var lastErr error
+
 	aRecs, err := c.GetA(domain)
-	if err == nil {
-		for _, a := range aRecs {
-			resolutions = append(resolutions, a)
-		}
+	if err != nil {
+		lastErr = err
 	}
+	resolutions = append(resolutions, aRecs...)
+
 	aaaaRecs, err := c.GetAAAA(domain)
-	if err == nil {
-		for _, aaaa := range aaaaRecs {
-			resolutions = append(resolutions, aaaa)
-		}
+	if err != nil {
+		lastErr = err
 	}
+	resolutions = append(resolutions, aaaaRecs...)
+
 	cnameRecs, err := c.GetCNAME(domain)
-	if err == nil {
-		for _, cname := range cnameRecs {
-			subResolutions := c.Resolve(cname)
-			for _, subResolution := range subResolutions {
-				resolutions = append(resolutions, subResolution)
-			}
-		}
+	if err != nil {
+		lastErr = err
 	}
-	return resolutions
+	for _, cname := range cnameRecs {
+		subResolutions, subErr := c.Resolve(cname)
+		if subErr != nil {
+			lastErr = subErr
+		}
+		resolutions = append(resolutions, subResolutions...)
+	}
+
+	// anything that resolved settles the question; only report a failure when
+	// the lookups left us knowing nothing at all
+	if len(resolutions) == 0 && lastErr != nil {
+		return nil, fmt.Errorf("could not determine whether %s resolves: %v", domain, lastErr)
+	}
+	return resolutions, nil
 }
 
 func NewClient(timeout time.Duration, retries int) *Client {

@@ -87,8 +87,12 @@ func (c *Checker) CheckNS(domain string) ([]*Match, error) {
 		}
 
 		// check if the NS hostname itself resolves
-		nsResolutions := c.dns.Resolve(authority)
-		if len(nsResolutions) > 0 {
+		nsResolutions, errResolve := c.dns.Resolve(authority)
+		if errResolve != nil {
+			// the lookup failed, so nothing is known about this nameserver
+			c.verbose("%s: nameserver %s could not be resolved: %v", domain, authority, errResolve)
+			status.inconclusive = true
+		} else if len(nsResolutions) > 0 {
 			// hostname resolves, so the domain behind it is registered
 			status.registered = true
 		} else if c.dns.DomainIsNXDOMAIN(authority) {

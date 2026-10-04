@@ -302,3 +302,75 @@ func TestResolverCountMatchesTheBundledList(t *testing.T) {
 		}
 	}
 }
+
+// Resolve must tell three outcomes apart: it resolved, it genuinely does not
+// resolve, and the lookups failed so nothing is known. Collapsing the last two
+// is what let a refusing resolver look like an absent record.
+
+func TestResolveReturnsAddresses(t *testing.T) {
+	addr := newTestResolver(t, func(req *dns.Msg) *dns.Msg {
+		if req.Question[0].Qtype != dns.TypeA {
+			return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess}}
+		}
+		return &dns.Msg{
+			MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess},
+			Answer: []dns.RR{mustRR(t, "takeover-target.com. 300 IN A 203.0.113.10")},
+		}
+	})
+
+	got, err := newTestClient(addr).Resolve("takeover-target.com")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if len(got) != 1 || got[0] != "203.0.113.10" {
+		t.Errorf("Resolve() = %v, want [203.0.113.10]", got)
+	}
+}
+
+func TestResolveIsEmptyWithoutErrorWhenNothingIsThere(t *testing.T) {
+	addr := newTestResolver(t, func(req *dns.Msg) *dns.Msg {
+		return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeNameError}}
+	})
+
+	got, err := newTestClient(addr).Resolve("gone.takeover-target.com")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v, want nil for a domain that simply does not resolve", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("Resolve() = %v, want nothing", got)
+	}
+}
+
+func TestResolveErrorsWhenTheLookupsFail(t *testing.T) {
+	addr, _ := refusing(t)
+
+	got, err := newTestClient(addr).Resolve("takeover-target.com")
+	if err == nil {
+		t.Error("Resolve() error = nil; a refusing resolver must not read as a domain that does not resolve")
+	}
+	if len(got) != 0 {
+		t.Errorf("Resolve() = %v, want nothing", got)
+	}
+}
+
+func TestResolveSucceedsWhenOnlySomeLookupsFail(t *testing.T) {
+	// A answers, AAAA and CNAME refuse: the domain demonstrably resolves, so
+	// the partial failures do not matter
+	addr := newTestResolver(t, func(req *dns.Msg) *dns.Msg {
+		if req.Question[0].Qtype == dns.TypeA {
+			return &dns.Msg{
+				MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess},
+				Answer: []dns.RR{mustRR(t, "takeover-target.com. 300 IN A 203.0.113.10")},
+			}
+		}
+		return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeRefused}}
+	})
+
+	got, err := newTestClient(addr).Resolve("takeover-target.com")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v, want nil when the domain resolved anyway", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("Resolve() = %v, want the one address that answered", got)
+	}
+}

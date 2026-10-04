@@ -43,7 +43,13 @@ func (c *Checker) CheckMX(domain string) ([]*Match, error) {
 		c.verbose("%s: checking MX record: %s", domain, mx)
 
 		// check if the MX hostname resolves
-		mxResolutions := c.dns.Resolve(mx)
+		mxResolutions, errResolve := c.dns.Resolve(mx)
+		if errResolve != nil {
+			// nothing could be established about this MX, so report nothing
+			// rather than guess at why it did not resolve
+			c.verbose("%s: MX record %s could not be resolved: %v", domain, mx, errResolve)
+			continue
+		}
 		if len(mxResolutions) == 0 {
 			// MX hostname doesn't resolve, check if it's NXDOMAIN
 			if c.dns.DomainIsNXDOMAIN(mx) {
